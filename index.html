@@ -393,8 +393,8 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
     <h1>REGÍSTRATE</h1>
     <p class="subtitle">Ingresa tus datos para obtener tu código</p>
     <div class="field">
-      <label>Tu nombre completo</label>
-      <input id="reg-nombre" type="text" placeholder="Ej: Juan Pérez" maxlength="40"/>
+      <label>Tu nombre completo <span style="color:var(--red)">*</span></label>
+      <input id="reg-nombre" type="text" placeholder="Ej: Juan Pérez" maxlength="40" required/>
     </div>
     <div class="field">
       <label>¿Quién será campeón? 🏆</label>
@@ -403,13 +403,16 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
       </select>
     </div>
     <div class="field">
-      <label>Correo electrónico</label>
-      <input id="reg-email" type="email" placeholder="tu@correo.com" maxlength="60"/>
+      <label>Correo electrónico <span style="color:var(--red)">*</span></label>
+      <input id="reg-email" type="email" placeholder="tu@correo.com" maxlength="60" required/>
     </div>
     <div class="field">
-      <label>Número de celular</label>
-      <input id="reg-phone" type="tel" placeholder="Ej: 3001234567" maxlength="15"/>
+      <label>Número de celular <span style="color:var(--red)">*</span></label>
+      <input id="reg-phone" type="tel" placeholder="Ej: 3001234567" maxlength="15" required/>
     </div>
+    <p style="font-size:11px;color:var(--muted);text-align:left;margin-bottom:12px">
+      <span style="color:var(--red)">*</span> Campos obligatorios
+    </p>
         <button class="btn-main" id="btn-register" onclick="doRegister()">🎉 Registrarme y obtener código</button>
     <button class="btn-ghost" onclick="goTo('screen-welcome')">← Volver</button>
     <div class="alert-box alert-err" id="reg-err"></div>
