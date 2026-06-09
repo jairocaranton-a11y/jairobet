@@ -347,6 +347,54 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
   .ranking-row :nth-child(n+4):not(:nth-child(4)):not(:last-child){display:none;}
   .content{padding:11px 8px;}
 }
+
+/* ── BANNER PRÓXIMOS PARTIDOS ── */
+.upcoming-banner{
+  background:linear-gradient(135deg,rgba(242,201,76,0.07),rgba(242,201,76,0.03));
+  border-bottom:1px solid rgba(242,201,76,0.2);
+  padding:12px 16px; display:none;
+}
+.upcoming-banner-inner{ max-width:980px; margin:0 auto; }
+.upcoming-banner-header{
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.upcoming-banner-title{
+  font-family:'Bebas Neue',sans-serif; font-size:13px;
+  letter-spacing:2px; color:var(--gold);
+}
+.upcoming-banner-close{
+  margin-left:auto; background:none; border:none;
+  color:var(--muted); cursor:pointer; font-size:16px;
+  line-height:1; padding:2px 6px; border-radius:4px;
+  transition:color .15s;
+}
+.upcoming-banner-close:hover{ color:var(--text); }
+.upcoming-match-row{
+  display:grid;
+  grid-template-columns:62px 1fr auto;
+  gap:10px; align-items:center;
+  padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.upcoming-match-row:last-child{ border-bottom:none; }
+.upcoming-time{ text-align:center; }
+.upcoming-time .t-hour{
+  font-family:'Bebas Neue',sans-serif; font-size:20px;
+  color:var(--gold); line-height:1;
+}
+.upcoming-time .t-date{
+  font-size:9px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.upcoming-teams{ font-weight:600; font-size:13px; }
+.upcoming-teams .t-group{
+  font-size:10px; color:var(--muted);
+  letter-spacing:1px; text-transform:uppercase; margin-top:1px;
+}
+.upcoming-countdown{
+  font-size:11px; color:var(--gold);
+  background:rgba(242,201,76,0.1); border:1px solid rgba(242,201,76,0.2);
+  border-radius:20px; padding:3px 9px; white-space:nowrap;
+}
 </style>
 </head>
 <body>
@@ -449,6 +497,18 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
         </div>
         <button class="btn-logout" onclick="doLogout()">Salir</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Banner: partidos próximas 24h -->
+  <div class="upcoming-banner" id="upcoming-banner">
+    <div class="upcoming-banner-inner">
+      <div class="upcoming-banner-header">
+        <span style="font-size:16px">⚽</span>
+        <span class="upcoming-banner-title">PARTIDOS EN LAS PRÓXIMAS 24 HORAS</span>
+        <button class="upcoming-banner-close" onclick="document.getElementById('upcoming-banner').style.display='none'" title="Cerrar">✕</button>
+      </div>
+      <div id="upcoming-matches-list"></div>
     </div>
   </div>
 
@@ -756,6 +816,7 @@ function launchApp(){
     updateChampionCountdown();
   }
   renderRanking();renderGroupPredictions();renderElimPredictions();renderBracket();
+  renderUpcomingBanner();
 }
 
 // ── API ──
@@ -1691,6 +1752,62 @@ function startMusicOnInteraction() {
 document.addEventListener('click',      startMusicOnInteraction, {once: true});
 document.addEventListener('touchstart', startMusicOnInteraction, {once: true});
 
+// ── BANNER PRÓXIMOS PARTIDOS ──
+function renderUpcomingBanner() {
+  const now    = new Date();
+  const in24h  = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  // Mapa rápido id -> { local, visitante, grupo }
+  const matchInfo = {};
+  Object.entries(GRUPOS_DATA).forEach(([grp, data]) => {
+    data.partidos.forEach(m => { matchInfo[m.id] = { local: m.local, visitante: m.visitante, grupo: grp }; });
+  });
+
+  // Filtrar partidos en las próximas 24h
+  const upcoming = [];
+  Object.entries(MATCH_TIMES).forEach(([id, ts]) => {
+    const mt = new Date(ts + ':00-05:00');
+    if (mt > now && mt <= in24h) {
+      const info = matchInfo[id] || {};
+      upcoming.push({ id, time: mt, local: info.local || 'TBD', visitante: info.visitante || 'TBD', grupo: info.grupo || null });
+    }
+  });
+
+  const banner = document.getElementById('upcoming-banner');
+  const list   = document.getElementById('upcoming-matches-list');
+  if (!banner || !list || upcoming.length === 0) return;
+
+  upcoming.sort((a, b) => a.time - b.time);
+
+  function fmtHour(d) {
+    return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Bogota' });
+  }
+  function fmtDay(d) {
+    return d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Bogota' });
+  }
+  function countdown(d) {
+    const diff  = d - now;
+    const h     = Math.floor(diff / 3600000);
+    const m     = Math.floor((diff % 3600000) / 60000);
+    return h > 0 ? `en ${h}h ${m}m` : `en ${m}m`;
+  }
+
+  list.innerHTML = upcoming.map(p => `
+    <div class="upcoming-match-row">
+      <div class="upcoming-time">
+        <div class="t-hour">${fmtHour(p.time)}</div>
+        <div class="t-date">${fmtDay(p.time)}</div>
+      </div>
+      <div class="upcoming-teams">
+        <div>${p.local} <span style="color:var(--muted);font-weight:400">vs</span> ${p.visitante}</div>
+        ${p.grupo ? `<div class="t-group">Grupo ${p.grupo}</div>` : ''}
+      </div>
+      <div class="upcoming-countdown">${countdown(p.time)}</div>
+    </div>
+  `).join('');
+
+  banner.style.display = 'block';
+}
 
 </script>
 </body>
