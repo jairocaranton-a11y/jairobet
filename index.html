@@ -715,12 +715,15 @@ function goPublic(){
 async function doRegister(){
   const nombre=document.getElementById('reg-nombre').value.trim();
   const campeon=document.getElementById('reg-campeon').value;
-  const btn=document.getElementById('btn-register');
-  const err=document.getElementById('reg-err');
+  const btn=document.getElementById('btn-register'),err=document.getElementById('reg-err');
   if(!nombre){showErr(err,'Escribe tu nombre completo.');return;}
+  const email=document.getElementById('reg-email').value.trim();
+  const phone=document.getElementById('reg-phone').value.trim();
+  if(!email||!email.includes('@')){showErr(err,'Ingresa tu correo electrónico.');return;}
+  if(!phone||phone.length<7){showErr(err,'Ingresa tu número de celular.');return;}
   btn.disabled=true;btn.textContent='⏳ Registrando…';err.style.display='none';
   try{
-    const res=await apiPost({action:'registrar',nombre,campeon});
+    const res=await apiGet({action:'registrar',nombre,campeon,email,phone});
     if(res.ok){
       newUserCode=res.code;
       document.getElementById('code-display').textContent=res.code;
@@ -729,7 +732,7 @@ async function doRegister(){
       localStorage.setItem('jb_code', res.code);
       goTo('screen-code');
     }else{
-      showErr(err, res.error||'Error al registrar.');
+      showErr(err,res.error||'Error al registrar.');
     }
   }catch(e){showErr(err,'Error de conexión. Intenta de nuevo.');}
   btn.disabled=false;btn.textContent='🎉 Registrarme y obtener código';
@@ -854,34 +857,6 @@ function showTab(id,el){
   document.getElementById('panel-'+id).classList.add('active');el.classList.add('active');
 }
 
-// Override apiPost for register to read response
-// Registration uses GET to avoid CORS issues with Apps Script
-window.doRegister = async function(){
-  const nombre=document.getElementById('reg-nombre').value.trim();
-  const campeon=document.getElementById('reg-campeon').value;
-  const btn=document.getElementById('btn-register'),err=document.getElementById('reg-err');
-  if(!nombre){showErr(err,'Escribe tu nombre completo.');return;}
-  err.style.display='none';
-    const email=document.getElementById('reg-email').value.trim();
-    const phone=document.getElementById('reg-phone').value.trim();
-    if(!email||!email.includes('@')){showErr(err,'Ingresa tu correo electrónico.');return;}
-    if(!phone||phone.length<7){showErr(err,'Ingresa tu número de celular.');return;}
-    btn.disabled=true;btn.textContent='⏳ Registrando…';
-  try{
-    const res=await apiGet({action:'registrar',nombre,campeon,email,phone});
-    if(res.ok){
-      newUserCode=res.code;
-      document.getElementById('code-display').textContent=res.code;
-      document.getElementById('code-screen-name').textContent=res.name.split(' ')[0]+'!';
-      currentUser={id:res.id,name:res.name,code:res.code,champion:res.champion};
-      localStorage.setItem('jb_code', res.code);
-      goTo('screen-code');
-    }else{
-      showErr(err,res.error||'Error al registrar.');
-    }
-  }catch(e){showErr(err,'Error de conexión. Intenta de nuevo.');}
-  btn.disabled=false;btn.textContent='🎉 Registrarme y obtener código';
-};
 
 // ── RANKING ──
 async function renderRanking(){
