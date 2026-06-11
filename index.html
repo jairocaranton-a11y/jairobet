@@ -819,6 +819,7 @@ function launchApp(){
     updateChampionCountdown();
   }
   renderRanking();renderGroupPredictions();renderElimPredictions();renderBracket();
+  syncRealResults().then(renderGroupPredictions);
   renderUpcomingBanner();
 }
 
@@ -1624,6 +1625,19 @@ window.addEventListener('appinstalled', () => {
 });
 
 // showTab is already defined above — patch it here
+// ── NUEVO: sincronizar marcadores reales del servidor en GRUPOS_DATA ──
+async function syncRealResults(){
+  try{
+    const res = await apiGet({action:'getResultados'});
+    if(res.ok && res.resultados){
+      Object.values(GRUPOS_DATA).forEach(g=>(g.partidos||[]).forEach(m=>{
+        const r = res.resultados[m.id];
+        if(r && r.gl !== undefined && r.gv !== undefined){ m.gl = Number(r.gl); m.gv = Number(r.gv); }
+      }));
+    }
+  }catch(e){}
+}
+
 const _baseShowTab = showTab;
 window.showTab = function(id, el) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1634,6 +1648,7 @@ window.showTab = function(id, el) {
   if (id === 'predicciones') initPredMatchSelect();
   if (id === 'ranking')      renderRanking();
   if (id === 'bracket')      renderBracket();
+  if (id === 'grupos')       syncRealResults().then(renderGroupPredictions);
 };
 
 
