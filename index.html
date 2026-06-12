@@ -1582,45 +1582,28 @@ async function renderAllPredictions() {
 // ══════════════════════════════════════════
 // FEATURE 3b: TABLA DE PREDICCIONES
 async function shareTablaPrediciones(){
-  const btn=document.getElementById('btn-tabla-preds');
-  btn.textContent='⏳ Cargando...';btn.disabled=true;
+  const btn=document.getElementById("btn-tabla-preds");
+  btn.textContent="⏳ Cargando...";btn.disabled=true;
   try{
-    const rk=await apiGet({action:'getRanking'});
-    if(!rk.ok) throw new Error('No se pudo cargar el ranking');
+    const rk=await apiGet({action:"getRanking"});
+    if(!rk.ok) throw new Error("No se pudo cargar el ranking");
     const jugadores=rk.ranking||[];
-    const allMatches=Object.values(GRUPOS_DATA).flatMap(g=>g.partidos);
-    const jugados=allMatches.filter(m=>isLocked(m.id)&&m.gl!==null&&m.gv!==null);
-    if(!jugados.length){alert('Aún no hay partidos terminados.');return;}
-    const predsAll=await Promise.all(
-      jugadores.map(j=>apiGet({action:'getGroupPreds',code:j.code})
-        .then(r=>({name:j.name,total:j.total,preds:r.ok?(r.preds||{}):{}}))
-        .catch(()=>({name:j.name,total:j.total,preds:{}})))
-    );
-    const fecha=new Date().toLocaleDateString('es-CO',{day:'numeric',month:'short'});
-    const L=[];
-    L.push('⚽ *JairoBet – Polla Mundial 2026*');
-    L.push('📊 *Tabla de predicciones* ('+fecha+')');
-    L.push('_Solo partidos ya jugados_
-');
+    const allM=Object.values(GRUPOS_DATA).flatMap(g=>g.partidos);
+    const jugados=allM.filter(m=>isLocked(m.id)&&m.gl!==null&&m.gv!==null);
+    if(!jugados.length){alert("Aún no hay partidos terminados.");btn.textContent="📊 Tabla predicciones";btn.disabled=false;return;}
+    const predsAll=await Promise.all(jugadores.map(j=>apiGet({action:"getGroupPreds",code:j.code}).then(r=>({name:j.name,total:j.total,preds:r.ok?(r.preds||{}):{}})).catch(()=>({name:j.name,total:j.total,preds:{}}))));
+    const fecha=new Date().toLocaleDateString("es-CO",{day:"numeric",month:"short"});
+    const NL="\n";
+    let msg="⚽ *JairoBet – Polla Mundial 2026*"+NL+"📊 *Tabla de predicciones* ("+fecha+")"+NL+"_Solo partidos ya jugados_"+NL+NL;
     predsAll.forEach((j,i)=>{
-      const nom=j.name.split(' ')[0].substring(0,14);
-      const det=jugados.map(m=>{
-        const p=j.preds[m.id]||{};
-        if(p.gl===undefined||p.gv===undefined) return m.id+':❓';
-        const rD=m.gl-m.gv,pD=Number(p.gl)-Number(p.gv);
-        const ic=(Number(p.gl)===m.gl&&Number(p.gv)===m.gv)?'✅':Math.sign(pD)===Math.sign(rD)?'🟡':'❌';
-        return m.id+':'+ic+p.gl+'-'+p.gv;
-      }).join(' ');
-      L.push((i+1)+'. *'+nom+'* ('+j.total+'pts)');
-      L.push('   '+det);
+      const nom=j.name.split(" ")[0].substring(0,14);
+      const det=jugados.map(m=>{const p=j.preds[m.id]||{};if(p.gl===undefined||p.gv===undefined)return m.id+":❓";const rD=m.gl-m.gv,pD=Number(p.gl)-Number(p.gv);const ic=(Number(p.gl)===m.gl&&Number(p.gv)===m.gv)?"✅":Math.sign(pD)===Math.sign(rD)?"🟡":"❌";return m.id+":"+ic+p.gl+"-"+p.gv;}).join(" ");
+      msg+=(i+1)+". *"+nom+"* ("+j.total+"pts)"+NL+"   "+det+NL;
     });
-    L.push('
-✅=Exacto(3pts) 🟡=Result(1pt) ❌=Fallo');
-    L.push('🔗 jairocaranton-a11y.github.io/jairobet/');
-    window.open('https://wa.me/?text='+encodeURIComponent(L.join('
-')),'_blank');
-  }catch(e){alert('Error: '+e.message);}
-  finally{btn.textContent='📊 Tabla predicciones';btn.disabled=false;}
+    msg+=NL+"✅=Exacto(3pts) 🟡=Result(1pt) ❌=Fallo"+NL+"🔗 jairocaranton-a11y.github.io/jairobet/";
+    window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+  }catch(e){alert("Error: "+e.message);}
+  finally{btn.textContent="📊 Tabla predicciones";btn.disabled=false;}
 }
 
 // FEATURE 3: COMPARTIR POR WHATSAPP
