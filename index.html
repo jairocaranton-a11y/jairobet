@@ -126,6 +126,7 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
 .podium-slot:nth-child(3) .podium-bar{height:52px;background:linear-gradient(180deg,#e0a96d,#b87333);}
 .podium-bar-medal{font-size:18px;line-height:1;}
 .podium-bar-pts{font-size:16px;font-weight:900;line-height:1.1;}
+.podium-bar-prize{font-size:9px;font-weight:700;opacity:.85;margin-top:1px;letter-spacing:.5px;}
 
 /* ranking */
 .ranking-header{display:grid;grid-template-columns:38px 1fr 62px 52px 52px 52px 60px 32px;
@@ -878,18 +879,19 @@ function renderRankingPodium(r){
   const el = document.getElementById('ranking-podium');
   if(!el || r.length < 1){ if(el) el.innerHTML=''; return; }
   const slots = [
-    { p: r[1], medal: '🥈' },
-    { p: r[0], medal: '🥇' },
-    { p: r[2], medal: '🥉' },
+    { p: r[1], medal: '🥈', prize: '$300.000' },
+    { p: r[0], medal: '🥇', prize: '$500.000' },
+    { p: r[2], medal: '🥉', prize: '$200.000' },
   ];
-  el.innerHTML = slots.map(({p, medal}) => p ? `
+  el.innerHTML = slots.map(({p, medal, prize}) => p ? `
     <div class="podium-slot">
-      <div class="podium-avatar">👕</div>
+      <div class="podium-avatar">⚽</div>
       <div class="podium-pname">${p.name.split(' ')[0]}</div>
       <div class="podium-pchamp">${p.champion||'—'}</div>
       <div class="podium-bar">
         <div class="podium-bar-medal">${medal}</div>
         <div class="podium-bar-pts">${p.total}</div>
+        <div class="podium-bar-prize">${prize}</div>
       </div>
     </div>
   ` : `<div class="podium-slot"></div>`).join('');
@@ -910,8 +912,7 @@ async function renderRanking(){
     document.getElementById('summary-cards').innerHTML=`
       <div class="summary-card"><div class="val">${r.length}</div><div class="lbl">Participantes</div></div>
       <div class="summary-card"><div class="val">🏆</div><div class="lbl">Campeón: ${campeonReal === '?' ? 'por definir' : campeonReal}</div></div>
-      <div class="summary-card"><div class="val">${r[0]?.total||0}</div><div class="lbl">Líder: ${r[0]?.name?.split(' ')[0]||'—'}</div></div>
-      <div class="summary-card"><div class="val">${MAX_PTS}</div><div class="lbl">Máx. pts</div></div>`;
+      `;
     list.innerHTML=r.map((s,i)=>{
       const cls=i===0?'gold':i===1?'silver':i===2?'bronze':'';
       const me=currentUser&&s.code===currentUser.code?'me':'';
