@@ -910,7 +910,6 @@ async function renderRanking(){
     // Find champion from ranking (highest campeon pts = 15)
     const campeonReal = r.find(p=>p.campeon===15)?.champion || '?';
     document.getElementById('summary-cards').innerHTML=`
-      <div class="summary-card"><div class="val">${r.length}</div><div class="lbl">Participantes</div></div>
       <div class="summary-card"><div class="val">🏆</div><div class="lbl">Campeón: ${campeonReal === '?' ? 'por definir' : campeonReal}</div></div>
       `;
     list.innerHTML=r.map((s,i)=>{
@@ -1695,7 +1694,8 @@ window.showTab = function(id, el) {
 // ══════════════════════════════════════════
 const MUSIC_PLAYLIST = [
   { id: '6Y1dtxb-2lE', title: 'El Ritmo Que Nos Une 🇨🇴', artist: 'Ryan Castro' },
-  { id: '_ROEgdYJdDw', title: 'Dai Dai (FIFA World Cup 2026) 🏆', artist: 'Shakira' }
+  { id: '_ROEgdYJdDw', title: 'Dai Dai (FIFA World Cup 2026) 🏆', artist: 'Shakira' },
+  { id: 'Lgp8iMvjLZI', title: 'Olé Olé (FIFA World Cup 2026) 🌟', artist: 'Shakira & Jennifer López' }
 ];
 
 let ytPlayer      = null;
