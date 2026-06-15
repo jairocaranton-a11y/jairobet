@@ -520,6 +520,8 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
     <button class="tab" onclick="showTab('bracket',this)">🎯 Bracket</button>
     <button class="tab" onclick="showTab('tabla',this)">📊 Tabla</button>
     <button class="tab" onclick="showTab('predicciones',this)">👁️ Predicciones</button>
+    <button class="tab" onclick="showTab('video',this)">🎬 Video</button>
+    <button class="tab" onclick="showTab('video',this)">🎬 Video</button>
   </div>
 
   <div id="panel-ranking" class="panel active">
@@ -604,7 +606,22 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
     </div>
   </div>
 
-  <!-- ═══ MODAL PREDICCIONES DE JUGADOR ═══ -->
+  <!-- PANEL VIDEO -->
+  <div id="panel-video" class="panel">
+    <div class="content">
+      <div style="text-align:center;margin-bottom:14px"><div style="font-size:18px;font-weight:900;color:var(--gold);margin-bottom:2px">🎬 Video Bar Race</div><div style="font-size:11px;color:var(--muted)" id="video-match-count">Cargando...</div></div>
+      <div id="video-status" style="text-align:center;padding:30px;color:var(--muted);font-size:13px">⏳ Cargando datos...</div>
+      <canvas id="video-canvas" width="720" height="520" style="display:none;width:100%;border-radius:12px;border:1px solid var(--border);background:#0A0E1A;margin-bottom:12px"></canvas>
+      <div id="video-controls" style="display:none">
+        <button id="video-gen-btn" class="btn-whatsapp" style="width:100%;margin-bottom:8px" onclick="generateBarRaceVideo()">🎬 Generar video</button>
+        <div id="video-prog" style="display:none;margin-bottom:8px"><div style="height:8px;background:rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;margin-bottom:6px"><div id="video-prog-fill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--gold),#27AE60);border-radius:8px;transition:width 0.2s"></div></div><div id="video-prog-txt" style="text-align:center;font-size:11px;color:var(--muted)">Generando...</div></div>
+        <div id="video-dl-area" style="display:none"><video id="video-preview" controls loop style="width:100%;border-radius:10px;margin-bottom:10px"></video><button id="video-dl-btn" class="btn-whatsapp" style="width:100%;background:#25D366">⬇️ Descargar para WhatsApp</button><button onclick="document.getElementById('video-dl-area').style.display='none';document.getElementById('video-gen-btn').style.display='block';document.getElementById('video-gen-btn').textContent='🔄 Generar de nuevo';" style="width:100%;margin-top:8px;background:var(--dark3);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;cursor:pointer;font-family:Barlow,sans-serif;font-size:13px">🔄 Generar de nuevo</button></div>
+        <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--muted)">Video WebM · Compatible con WhatsApp</div>
+      </div>
+    </div>
+  </div>
+
+    <!-- ═══ MODAL PREDICCIONES DE JUGADOR ═══ -->
   <div id="pred-modal-overlay" class="modal-overlay" onclick="closePredModal(event)">
     <div class="modal-sheet" id="pred-modal-sheet">
       <div style="padding:10px 16px 0"><div class="modal-handle"></div></div>
@@ -1645,6 +1662,7 @@ window.showTab = function(id, el) {
   if (id === 'ranking')      renderRanking();
   if (id === 'bracket')      renderBracket();
   if (id === 'grupos')       syncRealResults().then(renderGroupPredictions);
+  if (id === 'video')        initVideoPanel();
 };
 
 
@@ -1795,6 +1813,16 @@ function renderUpcomingBanner() {
   banner.style.display = 'block';
 }
 
+
+const VIDEO_COLORS=['#F2C94C','#27AE60','#2F80ED','#EB5757','#9B51E0','#F2994A','#56CCF2','#BB6BD9','#6FCF97','#4FC3F7','#FF8A65','#A5D6A7','#FFD700','#00CED1','#FF69B4'];
+let _vPart=[],_vPts=[],_vMatches=[];
+const _vL=(a,b,t)=>a+(b-a)*t;
+const _vE=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function _vRR(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+function _vState(u){return _vPart.map((p,i)=>({name:p.name,color:p.color,pts:u<0?0:_vPts[i].slice(0,u+1).reduce((a,b)=>a+b,0),matchPts:u>=0?(_vPts[i][u]??0):0})).sort((a,b)=>b.pts-a.pts||a.name.localeCompare(b.name));}
+function _vDraw(ctx,mi,pg,pS,cS){const VW=720,VH=520,LX=155,RX=VW-65,BW=RX-LX,BY=115,BH=28,BG=10,BS=BH+BG,mxP=Math.max(...cS.map(d=>d.pts),1);ctx.fillStyle='#0A0E1A';ctx.fillRect(0,0,VW,VH);[0.25,0.5,0.75,1].forEach(p=>{const x=LX+BW*p;ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,BY-6);ctx.lineTo(x,BY+_vPart.length*BS+4);ctx.stroke();});ctx.fillStyle='#F2C94C';ctx.font='bold 24px Arial,sans-serif';ctx.textAlign='center';ctx.fillText('JAIROBET - Polla Mundial 2026',VW/2,36);const m=_vMatches[Math.min(mi,_vMatches.length-1)];ctx.fillStyle='rgba(242,201,76,0.12)';_vRR(ctx,16,48,VW-32,42,10);ctx.fill();ctx.strokeStyle='rgba(242,201,76,0.3)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#F2C94C';ctx.font='bold 14px Arial,sans-serif';ctx.textAlign='left';ctx.fillText(m.label,30,75);ctx.fillStyle='#E8EDF5';ctx.font='13px Arial,sans-serif';ctx.fillText(m.result,68,75);_vMatches.forEach((_,i)=>{ctx.beginPath();ctx.arc(VW-85+i*16,69,4.5,0,Math.PI*2);ctx.fillStyle=i<=mi?'#F2C94C':'rgba(255,255,255,0.2)';ctx.fill();});const pp={};pS.forEach((d,i)=>{pp[d.name]=i;});cS.forEach((d,ci)=>{const pi=pp[d.name]??ci,y=_vL(BY+pi*BS,BY+ci*BS,_vE(pg)),pP=pS.find(p=>p.name===d.name)?.pts??0,pts=_vL(pP,d.pts,_vE(pg)),bw=(pts/mxP)*BW;ctx.fillStyle='rgba(255,255,255,0.05)';_vRR(ctx,LX,y+2,BW,BH-4,7);ctx.fill();if(bw>2){const g=ctx.createLinearGradient(LX,0,LX+bw,0);g.addColorStop(0,d.color+'88');g.addColorStop(1,d.color);ctx.fillStyle=g;_vRR(ctx,LX,y+2,bw,BH-4,7);ctx.fill();}if(pts>=1&&bw>45){ctx.fillStyle='#0A0E1A';ctx.font='bold 11px Arial,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(pts)+' pts',LX+bw-8,y+BH/2+5);}const rk=Math.round(_vL(pi+1,ci+1,_vE(pg)));ctx.fillStyle=rk===1?'#F2C94C':rk===2?'#C0C0C0':rk===3?'#CD7F32':'#7A8FA6';ctx.font='bold 12px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(rk+'°',15,y+BH/2+5);ctx.fillStyle=d.color;ctx.font=(ci<3?'bold ':'')+' 12px Arial,sans-serif';ctx.textAlign='right';ctx.fillText(d.name,LX-6,y+BH/2+5);if(d.matchPts>=1&&pg>0.6){const al=Math.min(1,(pg-0.6)*2.5);ctx.globalAlpha=al;const bc=d.matchPts===3?'#27AE60':'#F2C94C';ctx.fillStyle=bc+'33';_vRR(ctx,LX+bw+5,y+5,38,BH-10,5);ctx.fill();ctx.fillStyle=bc;ctx.font='bold 10px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(d.matchPts===3?'+3':'+1',LX+bw+24,y+BH/2+4);ctx.globalAlpha=1;}});ctx.fillStyle='rgba(242,201,76,0.08)';ctx.fillRect(0,VH-26,VW,26);ctx.fillStyle='#7A8FA6';ctx.font='10px Arial,sans-serif';ctx.textAlign='center';ctx.fillText('jairocaranton-a11y.github.io/jairobet/',VW/2,VH-9);}
+async function initVideoPanel(){const st=document.getElementById('video-status'),cv=document.getElementById('video-canvas'),ctrl=document.getElementById('video-controls'),mc=document.getElementById('video-match-count');st.innerHTML='⏳ Cargando datos...';st.style.display='block';cv.style.display='none';ctrl.style.display='none';try{const [rk,res]=await Promise.all([apiGet({action:'getRanking'}),apiGet({action:'getResultados'})]);if(!rk.ok||!res.ok)throw new Error('Error cargando datos');const ids=Object.keys(res.resultados).filter(id=>res.resultados[id].gl!==null&&res.resultados[id].gv!==null&&MATCH_TIMES[id]).sort((a,b)=>new Date(MATCH_TIMES[a]+':00-05:00')-new Date(MATCH_TIMES[b]+':00-05:00'));if(ids.length===0){st.innerHTML='⏳ Aún no hay partidos terminados.';mc.textContent='0 partidos jugados';return;}const aP=await Promise.all(ids.map(id=>apiGet({action:'getAllPreds',matchId:id}).then(r=>({id,preds:r.preds||[],real:res.resultados[id]}))));_vPart=rk.ranking.map((p,i)=>({name:p.name.split(' ')[0],code:p.code,color:VIDEO_COLORS[i%VIDEO_COLORS.length]}));_vPts=_vPart.map(p=>aP.map(({preds,real})=>{const pr=preds.find(x=>x.code===p.code);if(!pr)return 0;const pGL=Number(pr.gl),pGV=Number(pr.gv),rD=real.gl-real.gv,pD=pGL-pGV;if(pGL===real.gl&&pGV===real.gv)return 3;if(Math.sign(pD)===Math.sign(rD))return 1;return 0;}));_vMatches=aP.map(({id,real})=>{const mp=Object.values(GRUPOS_DATA).flatMap(g=>g.partidos).find(p=>p.id===id);return{label:id,result:(mp?.local||id)+' '+real.gl+'-'+real.gv+' '+(mp?.visitante||'')};});mc.textContent=ids.length+' partido'+(ids.length!==1?'s':'')+' jugados';st.style.display='none';cv.style.display='block';ctrl.style.display='block';const ctx=cv.getContext('2d');_vDraw(ctx,0,0,_vState(-1),_vState(0));}catch(e){st.innerHTML='❌ Error: '+e.message;}}
+async function generateBarRaceVideo(){const cv=document.getElementById('video-canvas'),ctx=cv.getContext('2d'),btn=document.getElementById('video-gen-btn'),prog=document.getElementById('video-prog'),fill=document.getElementById('video-prog-fill'),txt=document.getElementById('video-prog-txt'),dl=document.getElementById('video-dl-area');btn.style.display='none';prog.style.display='block';dl.style.display='none';const IT=1.0,TR=2.0,HL=1.2,OT=2.5,TOT=IT+_vMatches.length*(TR+HL)+OT;const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>{try{return MediaRecorder.isTypeSupported(t);}catch(e){return false;}})||'video/webm';const stream=cv.captureStream(30),recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:3000000});const chunks=[];recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};recorder.onstop=()=>{const blob=new Blob(chunks,{type:'video/webm'}),url=URL.createObjectURL(blob);document.getElementById('video-preview').src=url;document.getElementById('video-dl-btn').onclick=()=>{const a=document.createElement('a');a.href=url;a.download='jairobet-barrace.webm';a.click();};prog.style.display='none';dl.style.display='block';};recorder.start(50);const states=[_vState(-1),..._vMatches.map((_,i)=>_vState(i))];const t0=performance.now();await new Promise(resolve=>{function frame(){const t=(performance.now()-t0)/1000,p=Math.min(t/TOT,1);fill.style.width=Math.round(p*100)+'%';txt.textContent='Generando... '+Math.round(p*100)+'%';let rem=t,mi=0,pr2=0,ps=states[0],cs=states[1];if(rem>=IT){rem-=IT;let done=false;for(let m=0;m<_vMatches.length;m++){if(rem<TR){mi=m;pr2=rem/TR;ps=states[m];cs=states[m+1];done=true;break;}rem-=TR;if(rem<HL){mi=m;pr2=1;ps=states[m+1];cs=states[m+1];done=true;break;}rem-=HL;}if(!done){mi=_vMatches.length-1;pr2=1;ps=states[_vMatches.length];cs=states[_vMatches.length];}}  _vDraw(ctx,mi,pr2,ps,cs);if(t<TOT)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});recorder.stop();}
 </script>
 </body>
 </html>
