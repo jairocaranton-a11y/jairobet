@@ -110,6 +110,23 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
 .summary-card .val{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--gold);}
 .summary-card .lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
+/* podio ranking */
+.ranking-podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:8px 0 20px;margin-bottom:4px;}
+.podium-slot{flex:1;max-width:110px;text-align:center;}
+.podium-avatar{width:48px;height:48px;border-radius:50%;background:var(--dark4);border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px;animation:podFloat 3s ease-in-out infinite;}
+.podium-slot:nth-child(1) .podium-avatar{border-color:#C0C0C0;animation-delay:.3s;}
+.podium-slot:nth-child(2) .podium-avatar{border-color:var(--gold);animation-delay:0s;}
+.podium-slot:nth-child(3) .podium-avatar{border-color:#CD7F32;animation-delay:.6s;}
+@keyframes podFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.podium-pname{font-size:12px;font-weight:700;line-height:1.2;margin-bottom:2px;}
+.podium-pchamp{font-size:10px;color:var(--muted);}
+.podium-bar{border-radius:8px 8px 0 0;margin-top:8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:8px;}
+.podium-slot:nth-child(1) .podium-bar{height:70px;background:linear-gradient(180deg,#a8c0d6,#7f8fa6);}
+.podium-slot:nth-child(2) .podium-bar{height:96px;background:linear-gradient(180deg,#F2C94C,#E5A91A);color:#000;}
+.podium-slot:nth-child(3) .podium-bar{height:52px;background:linear-gradient(180deg,#e0a96d,#b87333);}
+.podium-bar-medal{font-size:18px;line-height:1;}
+.podium-bar-pts{font-size:16px;font-weight:900;line-height:1.1;}
+
 /* ranking */
 .ranking-header{display:grid;grid-template-columns:38px 1fr 62px 52px 52px 52px 60px 32px;
   gap:4px;padding:6px 11px;font-size:10px;font-weight:600;letter-spacing:1.5px;
@@ -525,6 +542,7 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
   <div id="panel-ranking" class="panel active">
     <div class="content">
       <div class="summary-cards" id="summary-cards"></div>
+      <div class="ranking-podium" id="ranking-podium"></div>
       <div class="ranking-header">
         <div>#</div><div>Participante</div>
         <div style="text-align:right">Total</div>
@@ -855,6 +873,28 @@ function showTab(id,el){
 }
 
 
+// ── PODIO ──
+function renderRankingPodium(r){
+  const el = document.getElementById('ranking-podium');
+  if(!el || r.length < 1){ if(el) el.innerHTML=''; return; }
+  const slots = [
+    { p: r[1], medal: '🥈' },
+    { p: r[0], medal: '🥇' },
+    { p: r[2], medal: '🥉' },
+  ];
+  el.innerHTML = slots.map(({p, medal}) => p ? `
+    <div class="podium-slot">
+      <div class="podium-avatar">👕</div>
+      <div class="podium-pname">${p.name.split(' ')[0]}</div>
+      <div class="podium-pchamp">${p.champion||'—'}</div>
+      <div class="podium-bar">
+        <div class="podium-bar-medal">${medal}</div>
+        <div class="podium-bar-pts">${p.total}</div>
+      </div>
+    </div>
+  ` : `<div class="podium-slot"></div>`).join('');
+}
+
 // ── RANKING ──
 async function renderRanking(){
   const list=document.getElementById('ranking-list');
@@ -864,6 +904,7 @@ async function renderRanking(){
       list.innerHTML='<div class="loading-msg">📊 El ranking aparecerá cuando haya predicciones guardadas.</div>';return;
     }
     const r=res.ranking;
+    renderRankingPodium(r);
     // Find champion from ranking (highest campeon pts = 15)
     const campeonReal = r.find(p=>p.campeon===15)?.champion || '?';
     document.getElementById('summary-cards').innerHTML=`
