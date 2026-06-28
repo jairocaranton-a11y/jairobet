@@ -688,6 +688,28 @@ const MATCH_TIMES={A1:'2026-06-11T14:00',A2:'2026-06-11T21:00',A3:'2026-06-18T11
 const isLocked=id=>{const t=MATCH_TIMES[id];return t?new Date()>=new Date(t+':00-05:00'):false;};
 
 const GRUPOS_DATA={A:{partidos:[{id:'A1',fecha:'11 Jun 14:00',local:'México',visitante:'Sudáfrica',gl:null,gv:null},{id:'A2',fecha:'11 Jun 21:00',local:'Corea del Sur',visitante:'Rep. Checa',gl:null,gv:null},{id:'A3',fecha:'18 Jun 11:00',local:'Rep. Checa',visitante:'Sudáfrica',gl:null,gv:null},{id:'A4',fecha:'18 Jun 20:00',local:'México',visitante:'Corea del Sur',gl:null,gv:null},{id:'A5',fecha:'24 Jun 20:00',local:'Rep. Checa',visitante:'México',gl:null,gv:null},{id:'A6',fecha:'24 Jun 20:00',local:'Sudáfrica',visitante:'Corea del Sur',gl:null,gv:null}]},B:{partidos:[{id:'B1',fecha:'12 Jun 14:00',local:'Canadá',visitante:'Bosnia-Herz.',gl:null,gv:null},{id:'B2',fecha:'13 Jun 14:00',local:'Catar',visitante:'Suiza',gl:null,gv:null},{id:'B3',fecha:'18 Jun 14:00',local:'Suiza',visitante:'Bosnia-Herz.',gl:null,gv:null},{id:'B4',fecha:'18 Jun 17:00',local:'Canadá',visitante:'Catar',gl:null,gv:null},{id:'B5',fecha:'24 Jun 14:00',local:'Suiza',visitante:'Canadá',gl:null,gv:null},{id:'B6',fecha:'24 Jun 14:00',local:'Bosnia-Herz.',visitante:'Catar',gl:null,gv:null}]},C:{partidos:[{id:'C1',fecha:'13 Jun 17:00',local:'Brasil',visitante:'Marruecos',gl:null,gv:null},{id:'C2',fecha:'13 Jun 20:00',local:'Haití',visitante:'Escocia',gl:null,gv:null},{id:'C3',fecha:'19 Jun 17:00',local:'Escocia',visitante:'Marruecos',gl:null,gv:null},{id:'C4',fecha:'19 Jun 19:30',local:'Brasil',visitante:'Haití',gl:null,gv:null},{id:'C5',fecha:'24 Jun 17:00',local:'Escocia',visitante:'Brasil',gl:null,gv:null},{id:'C6',fecha:'24 Jun 17:00',local:'Marruecos',visitante:'Haití',gl:null,gv:null}]},D:{partidos:[{id:'D1',fecha:'12 Jun 20:00',local:'EE.UU.',visitante:'Paraguay',gl:null,gv:null},{id:'D2',fecha:'13 Jun 23:00',local:'Australia',visitante:'Turquía',gl:null,gv:null},{id:'D3',fecha:'19 Jun 22:00',local:'Turquía',visitante:'Paraguay',gl:null,gv:null},{id:'D4',fecha:'19 Jun 14:00',local:'EE.UU.',visitante:'Australia',gl:null,gv:null},{id:'D5',fecha:'25 Jun 21:00',local:'Turquía',visitante:'EE.UU.',gl:null,gv:null},{id:'D6',fecha:'25 Jun 21:00',local:'Paraguay',visitante:'Australia',gl:null,gv:null}]},E:{partidos:[{id:'E1',fecha:'14 Jun 12:00',local:'Alemania',visitante:'Curazao',gl:null,gv:null},{id:'E2',fecha:'14 Jun 18:00',local:'Costa de Marfil',visitante:'Ecuador',gl:null,gv:null},{id:'E3',fecha:'20 Jun 15:00',local:'Alemania',visitante:'Costa de Marfil',gl:null,gv:null},{id:'E4',fecha:'20 Jun 19:00',local:'Ecuador',visitante:'Curazao',gl:null,gv:null},{id:'E5',fecha:'25 Jun 15:00',local:'Ecuador',visitante:'Alemania',gl:null,gv:null},{id:'E6',fecha:'25 Jun 15:00',local:'Curazao',visitante:'Costa de Marfil',gl:null,gv:null}]},F:{partidos:[{id:'F1',fecha:'14 Jun 15:00',local:'Países Bajos',visitante:'Japón',gl:null,gv:null},{id:'F2',fecha:'14 Jun 21:00',local:'Suecia',visitante:'Túnez',gl:null,gv:null},{id:'F3',fecha:'20 Jun 12:00',local:'Países Bajos',visitante:'Suecia',gl:null,gv:null},{id:'F4',fecha:'20 Jun 23:00',local:'Túnez',visitante:'Japón',gl:null,gv:null},{id:'F5',fecha:'25 Jun 18:00',local:'Japón',visitante:'Suecia',gl:null,gv:null},{id:'F6',fecha:'25 Jun 18:00',local:'Túnez',visitante:'Países Bajos',gl:null,gv:null}]},G:{partidos:[{id:'G1',fecha:'15 Jun 14:00',local:'Bélgica',visitante:'Egipto',gl:null,gv:null},{id:'G2',fecha:'15 Jun 20:00',local:'Irán',visitante:'Nueva Zelanda',gl:null,gv:null},{id:'G3',fecha:'21 Jun 14:00',local:'Bélgica',visitante:'Irán',gl:null,gv:null},{id:'G4',fecha:'21 Jun 20:00',local:'Nueva Zelanda',visitante:'Egipto',gl:null,gv:null},{id:'G5',fecha:'26 Jun 22:00',local:'Egipto',visitante:'Irán',gl:null,gv:null},{id:'G6',fecha:'26 Jun 22:00',local:'Nueva Zelanda',visitante:'Bélgica',gl:null,gv:null}]},H:{partidos:[{id:'H1',fecha:'15 Jun 11:00',local:'España',visitante:'Cabo Verde',gl:null,gv:null},{id:'H2',fecha:'15 Jun 17:00',local:'Arabia Saudita',visitante:'Uruguay',gl:null,gv:null},{id:'H3',fecha:'21 Jun 11:00',local:'España',visitante:'Arabia Saudita',gl:null,gv:null},{id:'H4',fecha:'21 Jun 17:00',local:'Uruguay',visitante:'Cabo Verde',gl:null,gv:null},{id:'H5',fecha:'26 Jun 19:00',local:'Cabo Verde',visitante:'Arabia Saudita',gl:null,gv:null},{id:'H6',fecha:'26 Jun 19:00',local:'Uruguay',visitante:'España',gl:null,gv:null}]},I:{partidos:[{id:'I1',fecha:'16 Jun 14:00',local:'Francia',visitante:'Senegal',gl:null,gv:null},{id:'I2',fecha:'16 Jun 17:00',local:'Irak',visitante:'Noruega',gl:null,gv:null},{id:'I3',fecha:'22 Jun 16:00',local:'Francia',visitante:'Irak',gl:null,gv:null},{id:'I4',fecha:'22 Jun 19:00',local:'Noruega',visitante:'Senegal',gl:null,gv:null},{id:'I5',fecha:'26 Jun 14:00',local:'Noruega',visitante:'Francia',gl:null,gv:null},{id:'I6',fecha:'26 Jun 14:00',local:'Senegal',visitante:'Irak',gl:null,gv:null}]},J:{partidos:[{id:'J1',fecha:'16 Jun 20:00',local:'Argentina',visitante:'Argelia',gl:null,gv:null},{id:'J2',fecha:'16 Jun 23:00',local:'Austria',visitante:'Jordania',gl:null,gv:null},{id:'J3',fecha:'22 Jun 12:00',local:'Argentina',visitante:'Austria',gl:null,gv:null},{id:'J4',fecha:'22 Jun 22:00',local:'Jordania',visitante:'Argelia',gl:null,gv:null},{id:'J5',fecha:'27 Jun 21:00',local:'Argelia',visitante:'Austria',gl:null,gv:null},{id:'J6',fecha:'27 Jun 21:00',local:'Jordania',visitante:'Argentina',gl:null,gv:null}]},K:{partidos:[{id:'K1',fecha:'17 Jun 12:00',local:'Portugal',visitante:'RD del Congo',gl:null,gv:null},{id:'K2',fecha:'17 Jun 21:00',local:'Uzbekistán',visitante:'Colombia',gl:null,gv:null},{id:'K3',fecha:'23 Jun 12:00',local:'Portugal',visitante:'Uzbekistán',gl:null,gv:null},{id:'K4',fecha:'23 Jun 21:00',local:'Colombia',visitante:'RD del Congo',gl:null,gv:null},{id:'K5',fecha:'27 Jun 18:30',local:'Colombia',visitante:'Portugal',gl:null,gv:null},{id:'K6',fecha:'27 Jun 18:30',local:'RD del Congo',visitante:'Uzbekistán',gl:null,gv:null}]},L:{partidos:[{id:'L1',fecha:'17 Jun 15:00',local:'Inglaterra',visitante:'Croacia',gl:null,gv:null},{id:'L2',fecha:'17 Jun 18:00',local:'Ghana',visitante:'Panamá',gl:null,gv:null},{id:'L3',fecha:'23 Jun 15:00',local:'Inglaterra',visitante:'Ghana',gl:null,gv:null},{id:'L4',fecha:'23 Jun 18:00',local:'Panamá',visitante:'Croacia',gl:null,gv:null},{id:'L5',fecha:'27 Jun 16:00',local:'Panamá',visitante:'Inglaterra',gl:null,gv:null},{id:'L6',fecha:'27 Jun 16:00',local:'Croacia',visitante:'Ghana',gl:null,gv:null}]}};
+// Cruces de eliminatorias (nombres de equipos para el banner y bloqueos por hora).
+// Se completan ronda por ronda conforme se conocen los emparejamientos.
+const ELIM_FIXTURES = {
+  // 16avos de Final
+  P73:{local:'Sudáfrica',     visitante:'Canadá',       fecha:'28 Jun 14:00', ronda:'16avos'},
+  P74:{local:'Alemania',      visitante:'Paraguay',     fecha:'29 Jun 15:30', ronda:'16avos'},
+  P75:{local:'Países Bajos',  visitante:'Marruecos',    fecha:'29 Jun 20:00', ronda:'16avos'},
+  P76:{local:'Brasil',        visitante:'Japón',        fecha:'29 Jun 12:00', ronda:'16avos'},
+  P77:{local:'Francia',       visitante:'Suecia',       fecha:'30 Jun 16:00', ronda:'16avos'},
+  P78:{local:'Costa de Marfil',visitante:'Noruega',     fecha:'30 Jun 12:00', ronda:'16avos'},
+  P79:{local:'México',        visitante:'Ecuador',      fecha:'30 Jun 20:00', ronda:'16avos'},
+  P80:{local:'Inglaterra',    visitante:'RD del Congo', fecha:'1 Jul 11:00',  ronda:'16avos'},
+  P81:{local:'EE.UU.',        visitante:'Bosnia-Herz.', fecha:'1 Jul 19:00',  ronda:'16avos'},
+  P82:{local:'Bélgica',       visitante:'Senegal',      fecha:'1 Jul 15:00',  ronda:'16avos'},
+  P83:{local:'Portugal',      visitante:'Croacia',      fecha:'2 Jul 18:00',  ronda:'16avos'},
+  P84:{local:'España',        visitante:'Austria',      fecha:'2 Jul 14:00',  ronda:'16avos'},
+  P85:{local:'Suiza',         visitante:'Argelia',      fecha:'2 Jul 22:00',  ronda:'16avos'},
+  P86:{local:'Argentina',     visitante:'Cabo Verde',   fecha:'3 Jul 17:00',  ronda:'16avos'},
+  P87:{local:'Colombia',      visitante:'Ghana',        fecha:'3 Jul 20:30',  ronda:'16avos'},
+  P88:{local:'Australia',     visitante:'Egipto',       fecha:'3 Jul 13:00',  ronda:'16avos'},
+};
+
 // ELIM_ROUNDS is loaded dynamically from Google Sheets by the organizer.
 // Structure per round: { name, pts, ptsExact, active, matches[] }
 // Each match: { id, e1, e2, gl, gv, winner, date }
@@ -1807,6 +1829,10 @@ function renderUpcomingBanner() {
   Object.entries(GRUPOS_DATA).forEach(([grp, data]) => {
     data.partidos.forEach(m => { matchInfo[m.id] = { local: m.local, visitante: m.visitante, grupo: grp }; });
   });
+  // Cruces eliminatorios (16avos, etc.) — etiqueta de ronda en lugar de grupo
+  Object.entries(ELIM_FIXTURES).forEach(([id, f]) => {
+    matchInfo[id] = { local: f.local, visitante: f.visitante, grupo: null, ronda: f.ronda };
+  });
 
   // Filtrar partidos en las próximas 24h
   const upcoming = [];
@@ -1814,7 +1840,7 @@ function renderUpcomingBanner() {
     const mt = new Date(ts + ':00-05:00');
     if (mt > now && mt <= in24h) {
       const info = matchInfo[id] || {};
-      upcoming.push({ id, time: mt, local: info.local || 'TBD', visitante: info.visitante || 'TBD', grupo: info.grupo || null });
+      upcoming.push({ id, time: mt, local: info.local || 'TBD', visitante: info.visitante || 'TBD', grupo: info.grupo || null, ronda: info.ronda || null });
     }
   });
 
@@ -1845,7 +1871,7 @@ function renderUpcomingBanner() {
       </div>
       <div class="upcoming-teams">
         <div>${p.local} <span style="color:var(--muted);font-weight:400">vs</span> ${p.visitante}</div>
-        ${p.grupo ? `<div class="t-group">Grupo ${p.grupo}</div>` : ''}
+        ${p.grupo ? `<div class="t-group">Grupo ${p.grupo}</div>` : (p.ronda ? `<div class="t-group">${p.ronda}</div>` : '')}
       </div>
       <div class="upcoming-countdown">${countdown(p.time)}</div>
     </div>
