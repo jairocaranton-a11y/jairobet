@@ -1232,6 +1232,18 @@ async function saveGroupPreds(){
 //  • Solo ganador correcto (marcador diferente) → pts
 //  • Ganador incorrecto → 0
 
+// Fecha corta para eliminatorias. El servidor puede devolver un Date completo
+// ("Sun Jun 28 2026 14:00:00 GMT-0500 (...)"); preferimos la fecha limpia de
+// ELIM_FIXTURES y, si no, recortamos todo lo que venga después de la hora.
+function fmtElimDate(m) {
+  const fx = ELIM_FIXTURES[m.id];
+  if (fx && fx.fecha) return fx.fecha;
+  if (!m.date) return '';
+  const s = String(m.date);
+  const cut = s.split(/\s+GMT/i)[0].trim();
+  return cut || s;
+}
+
 function calcElimPts(m, r, pred) {
   if (!pred || !pred.winner) return {cls:'pts-miss', label:'·'};
   if (pred.winner === m.winner) {
@@ -1314,7 +1326,7 @@ function renderElimPredictions() {
               <td>
                 <span style="font-size:10px;color:var(--muted);font-weight:600">${m.id}</span>
                 ${lk ? '<span class="lock-icon"> 🔒</span>' : ''}
-                ${m.date ? `<div style="font-size:10px;color:var(--muted)">${m.date}</div>` : ''}
+                ${(() => { const d = fmtElimDate(m); return d ? `<div style="font-size:10px;color:var(--muted)">${d}</div>` : ''; })()}
               </td>
               <td style="font-weight:700;font-size:13px">${m.e1}</td>
               <td style="text-align:center">
