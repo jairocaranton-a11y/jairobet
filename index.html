@@ -1436,22 +1436,35 @@ async function saveElimPreds(){
   const btn=document.getElementById('save-e-btn');
   const msg=document.getElementById('save-e-msg');
   const errEl=document.getElementById('save-e-err');
-  btn.disabled=true; btn.textContent='⏳ Guardando...'; msg.style.display='none'; errEl.style.display='none';
+  msg.style.display='none'; errEl.style.display='none';
+
+  // Solo predicciones con ganador definido
+  const pending = Object.entries(elimPreds).filter(([,p]) => p && p.winner);
+  if(!pending.length){
+    msg.textContent='⚠️ No hay predicciones con ganador para guardar';
+    msg.style.display='inline'; setTimeout(()=>msg.style.display='none',3000);
+    return;
+  }
+
+  btn.disabled=true; btn.textContent=`⏳ Guardando ${pending.length}...`;
   let saved=0, failed=0;
   try{
-    for(const[matchId,pred] of Object.entries(elimPreds)){
-      if(!pred||!pred.winner)continue;
+    // Lanzar todas en paralelo (el navegador las agrupa de a ~6) → mucho más rápido que en serie
+    const results = await Promise.all(pending.map(([matchId,pred])=>{
       const rnd = ELIM_ROUNDS.find(r=>r.matches.find(m=>m.id===matchId));
-      const res = await apiPost({
+      return apiPost({
         action:'saveElimPred', code:currentUser.code, matchId,
         winner: pred.winner,
-        gl: pred.gl!==undefined ? pred.gl : '',
-        gv: pred.gv!==undefined ? pred.gv : '',
+        gl: pred.gl!==undefined && !isNaN(pred.gl) ? pred.gl : '',
+        gv: pred.gv!==undefined && !isNaN(pred.gv) ? pred.gv : '',
         ronda: rnd ? rnd.key : ''
-      });
-      if(res.ok) saved++;
-      else { failed++; console.warn('Failed:', matchId, res.error); }
-    }
+      }).then(res => ({matchId, res}))
+        .catch(err => ({matchId, res:{ok:false, error:String(err)}}));
+    }));
+    results.forEach(({matchId,res})=>{
+      if(res && res.ok) saved++;
+      else { failed++; console.warn('Failed:', matchId, res && res.error); }
+    });
     btn.disabled=false; btn.textContent='💾 Guardar eliminatorias';
     if(failed===0){
       msg.textContent=`✅ ${saved} predicciones guardadas`;
