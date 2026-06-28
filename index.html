@@ -1600,16 +1600,15 @@ async function renderTablaGrupos() {
 async function initPredMatchSelect() {
   const sel = document.getElementById('pred-match-select');
   if (!sel) return;
-  // Only show locked matches (already started)
-  const locked = Object.entries(MATCH_TIMES)
-    .filter(([id,t]) => isLocked(id))
-    .map(([id]) => id);
-  
+
+  // Asegurar que las rondas eliminatorias estén cargadas desde el servidor
+  await loadElimRounds();
+
   sel.innerHTML = '<option value="">— Elige un partido —</option>';
-  
-  // Group by grupo
+
+  // ── Fase de grupos (solo partidos ya iniciados) ──
   for (const [grp, data] of Object.entries(GRUPOS_DATA)) {
-    const grpMatches = data.partidos.filter(m => locked.includes(m.id));
+    const grpMatches = data.partidos.filter(m => isLocked(m.id));
     if (!grpMatches.length) continue;
     const og = document.createElement('optgroup');
     og.label = `Grupo ${grp}`;
@@ -1621,6 +1620,21 @@ async function initPredMatchSelect() {
     });
     sel.appendChild(og);
   }
+
+  // ── Eliminatorias (rondas activas, solo partidos ya iniciados) ──
+  ELIM_ROUNDS.filter(r => r.active && r.matches.length).forEach(r => {
+    const rMatches = r.matches.filter(m => isLocked(m.id));
+    if (!rMatches.length) return;
+    const og = document.createElement('optgroup');
+    og.label = `⚡ ${r.name}`;
+    rMatches.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = `${m.id}: ${m.e1} vs ${m.e2}`;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
 }
 
 async function renderAllPredictions() {
@@ -1630,50 +1644,97 @@ async function renderAllPredictions() {
 
   container.innerHTML = '<div class="loading-msg"><div class="spinner"></div></div>';
 
+  // ¿El partido seleccionado es de eliminatorias?
+  const elim = ELIM_ROUNDS
+    .flatMap(r => r.matches.map(m => ({m, r})))
+    .find(x => x.m.id === matchId);
+
   try {
     const res = await apiGet({action:'getAllPreds', matchId});
     if (!res.ok || !res.preds) {
       container.innerHTML = '<div class="loading-msg">No hay predicciones para este partido.</div>';
       return;
     }
-
-    const match = Object.values(GRUPOS_DATA).flatMap(g=>g.partidos).find(m=>m.id===matchId);
-    const hasResult = match && match.gl !== null;
-
-    let html = `
-      <div style="background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
-        <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px">
-          ${match?.local || ''} 
-          <span style="color:var(--gold);margin:0 8px">${hasResult ? match.gl+'–'+match.gv : 'vs'}</span> 
-          ${match?.visitante || ''}
-        </div>
-        ${hasResult ? '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">Resultado final</div>' : ''}
-      </div>
-      <table class="pred-all-table">
-        <tr>
-          <th>Participante</th>
-          <th style="text-align:center">Predicción</th>
-          ${hasResult ? '<th style="text-align:center">Pts</th>' : ''}
-        </tr>
-        ${res.preds.map(p => {
-          let pts = '', ptsClass = 'pts-miss';
-          if (hasResult && p.gl !== '' && p.gv !== '') {
-            const rD = match.gl - match.gv, pD = Number(p.gl) - Number(p.gv);
-            if (Number(p.gl)===match.gl && Number(p.gv)===match.gv) { pts='⭐ 3'; ptsClass='pts-exact'; }
-            else if (Math.sign(pD)===Math.sign(rD)) { pts='1'; ptsClass='pts-result'; }
-            else { pts='0'; ptsClass='pts-miss'; }
-          }
-          return `<tr>
-            <td>${p.name}</td>
-            <td class="score-pred">${p.gl !== '' ? p.gl+' – '+p.gv : '—'}</td>
-            ${hasResult ? `<td class="${ptsClass}" style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px">${pts}</td>` : ''}
-          </tr>`;
-        }).join('')}
-      </table>`;
-    container.innerHTML = html;
+    container.innerHTML = elim
+      ? renderElimAllPreds(elim.m, elim.r, res.preds)
+      : renderGroupAllPreds(matchId, res.preds);
   } catch(e) {
     container.innerHTML = '<div class="loading-msg">Error cargando predicciones.</div>';
   }
+}
+
+// ── Render: predicciones de todos para un partido de GRUPOS ──
+function renderGroupAllPreds(matchId, preds) {
+  const match = Object.values(GRUPOS_DATA).flatMap(g=>g.partidos).find(m=>m.id===matchId);
+  const hasResult = match && match.gl !== null;
+  return `
+    <div style="background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px">
+        ${match?.local || ''}
+        <span style="color:var(--gold);margin:0 8px">${hasResult ? match.gl+'–'+match.gv : 'vs'}</span>
+        ${match?.visitante || ''}
+      </div>
+      ${hasResult ? '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">Resultado final</div>' : ''}
+    </div>
+    <table class="pred-all-table">
+      <tr>
+        <th>Participante</th>
+        <th style="text-align:center">Predicción</th>
+        ${hasResult ? '<th style="text-align:center">Pts</th>' : ''}
+      </tr>
+      ${preds.map(p => {
+        let pts = '', ptsClass = 'pts-miss';
+        if (hasResult && p.gl !== '' && p.gv !== '') {
+          const rD = match.gl - match.gv, pD = Number(p.gl) - Number(p.gv);
+          if (Number(p.gl)===match.gl && Number(p.gv)===match.gv) { pts='⭐ 3'; ptsClass='pts-exact'; }
+          else if (Math.sign(pD)===Math.sign(rD)) { pts='1'; ptsClass='pts-result'; }
+          else { pts='0'; ptsClass='pts-miss'; }
+        }
+        return `<tr>
+          <td>${p.name}</td>
+          <td class="score-pred">${p.gl !== '' ? p.gl+' – '+p.gv : '—'}</td>
+          ${hasResult ? `<td class="${ptsClass}" style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px">${pts}</td>` : ''}
+        </tr>`;
+      }).join('')}
+    </table>`;
+}
+
+// ── Render: predicciones de todos para un partido de ELIMINATORIAS ──
+function renderElimAllPreds(m, r, preds) {
+  const hasResult = !!m.winner && m.gl !== null && m.gv !== null;
+  return `
+    <div style="background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="text-align:center;font-size:11px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${r.name}</div>
+      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px">
+        ${m.e1}
+        <span style="color:var(--gold);margin:0 8px">${hasResult ? m.gl+'–'+m.gv : 'vs'}</span>
+        ${m.e2}
+      </div>
+      ${hasResult ? `<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">Avanza: <b style="color:var(--gold)">${m.winner}</b></div>` : ''}
+    </div>
+    <table class="pred-all-table">
+      <tr>
+        <th>Participante</th>
+        <th style="text-align:center">Marcador</th>
+        <th style="text-align:center">Avanza</th>
+        ${hasResult ? '<th style="text-align:center">Pts</th>' : ''}
+      </tr>
+      ${preds.map(p => {
+        const hasPred = p.gl !== '' && p.gv !== '';
+        let pts = '', ptsClass = 'pts-miss';
+        if (hasResult) {
+          const v = calcElimPts(m, r, {winner: p.winner, gl: p.gl, gv: p.gv});
+          pts = v.label; ptsClass = v.cls;
+        }
+        const winnerOk = hasResult && p.winner && p.winner === m.winner;
+        return `<tr>
+          <td>${p.name}</td>
+          <td class="score-pred">${hasPred ? p.gl+' – '+p.gv : '—'}</td>
+          <td style="text-align:center;font-size:11px;font-weight:600;color:${winnerOk?'var(--gold)':'var(--text)'}">${p.winner || '—'}</td>
+          ${hasResult ? `<td class="${ptsClass}" style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px">${pts}</td>` : ''}
+        </tr>`;
+      }).join('')}
+    </table>`;
 }
 
 // ══════════════════════════════════════════
