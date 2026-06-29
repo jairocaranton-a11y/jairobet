@@ -149,6 +149,9 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
 .exactos-cell{font-size:13px;font-weight:700;color:var(--green);text-align:right;}
 .exactos-cell.ex-zero{color:var(--muted);}
 .final-pred-sub{font-size:10px;color:var(--gold);margin-top:1px;}
+.rank-breakdown{display:none;font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.3px;}
+.rank-breakdown b{color:var(--text);font-weight:700;}
+.rank-breakdown .bd-e{color:var(--gold);}
 .pct-wrap{display:flex;align-items:center;gap:5px;}
 .pct-bar{flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
 .pct-fill{height:100%;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:2px;}
@@ -364,11 +367,12 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
 .btn-whatsapp:hover { background:#1ebe57; transform:translateY(-1px); }
 
 @media(max-width:580px){
-  .ranking-header,.ranking-row{grid-template-columns:32px 1fr 50px 28px;}
-  .ranking-header :nth-child(n+4):not(:nth-child(4)):not(:last-child),
-  .ranking-row :nth-child(n+4):not(:nth-child(4)):not(:last-child){display:none;}
+  .ranking-header,.ranking-row{grid-template-columns:30px 1fr 48px 30px;}
+  .ranking-header :nth-child(n+4):not(:last-child),
+  .ranking-row :nth-child(n+4):not(:last-child){display:none;}
   .content{padding:11px 8px;}
   .final-pred-sub{display:none;}
+  .rank-breakdown{display:block;}
 }
 
 /* ── BANNER PRÓXIMOS PARTIDOS ── */
@@ -955,6 +959,7 @@ async function renderRanking(){
         <div>
           <div class="player-name">${s.name}${me?' 👈':''}${tieIndicator}</div>
           <div class="player-champ">🏅 ${s.champion||'—'}${fp?` &nbsp;·&nbsp; <span class="final-pred-sub" title="Predicción de la final">🏟 ${fp}</span>`:''}</div>
+          <div class="rank-breakdown">Grupos <b>${s.grupos}</b> · Elim <b class="bd-e">${s.elim}</b> · Camp <b>${s.campeon}</b>${ex!==null?` · ✓ <b>${ex}</b>`:''}</div>
         </div>
         <div class="pts-total ${s.total===0?'pts-zero':''}">${s.total}</div>
         <div class="pts-sub ${s.grupos===0?'pts-zero':''}">${s.grupos}</div>
