@@ -873,14 +873,32 @@ function launchApp(){
 }
 
 // ── API ──
-async function apiGet(p){const r=await fetch(`${API}?${new URLSearchParams(p)}`);return r.json();}
+// Caché en memoria con TTL: acelera los cambios de pestaña y evita
+// re-consultar el Apps Script. Guarda la PROMESA para deduplicar llamadas
+// simultáneas a la misma consulta. Se limpia al guardar predicciones.
+const _apiCache = new Map();
+const API_CACHE_TTL = 60000; // 60 s
+function clearApiCache(){ _apiCache.clear(); }
+async function apiGet(p, opts){
+  const qs = new URLSearchParams(p).toString();
+  const noCache = opts && opts.fresh;
+  const hit = _apiCache.get(qs);
+  if(!noCache && hit && (Date.now() - hit.t) < API_CACHE_TTL) return hit.p;
+  const prom = fetch(`${API}?${qs}`)
+    .then(r => r.json())
+    .catch(e => { _apiCache.delete(qs); throw e; });
+  _apiCache.set(qs, {t: Date.now(), p: prom});
+  return prom;
+}
 async function apiPost(d){
   // Route saves through GET to avoid CORS issues with Apps Script
   try {
     const params = new URLSearchParams();
     Object.entries(d).forEach(([k,v]) => params.append(k, v !== undefined && v !== null ? v : ''));
     const r = await fetch(`${API}?${params.toString()}`);
-    return r.json();
+    const json = await r.json();
+    clearApiCache(); // invalidar caché tras un guardado
+    return json;
   } catch(e) {
     console.error('apiPost error:', e);
     return {ok: false, error: e.toString()};
@@ -1036,51 +1054,14 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
     ${ptsCampeon>0?`<div class="modal-pts-badge modal-pts-exact" style="margin-left:auto">+${ptsCampeon} pts</div>`:''}
   </div>`;
 
-  // ── Predicciones de Grupos ──
-  html += `<div class="modal-section-title">⚽ Fase de Grupos</div>`;
-  const allMatches = Object.values(GRUPOS_DATA).flatMap(g=>g.partidos);
-  const lockedMatches = allMatches.filter(m=>isLocked(m.id));
-
-  if(lockedMatches.length===0){
-    html += `<div class="modal-no-pred">El torneo aún no ha iniciado — sin partidos bloqueados.</div>`;
-  } else {
-    // Agrupar por grupo
-    Object.entries(GRUPOS_DATA).forEach(([grp, data])=>{
-      const gMatchesLocked = data.partidos.filter(m=>isLocked(m.id));
-      if(!gMatchesLocked.length) return;
-      html += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
-        text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--dark3)">Grupo ${grp}</div>`;
-      gMatchesLocked.forEach(m=>{
-        const p = gPreds[m.id]||{};
-        const hasPred = p.gl!==undefined && p.gv!==undefined;
-        const pts = calcGroupPts(p, m);
-        let ptsCls='modal-pts-none', ptsLbl='·';
-        if(pts===3){ptsCls='modal-pts-badge modal-pts-exact';ptsLbl='+3';}
-        else if(pts===1){ptsCls='modal-pts-badge modal-pts-result';ptsLbl='+1';}
-        else if(pts===0){ptsCls='modal-pts-badge modal-pts-miss';ptsLbl='0';}
-
-        html += `<div class="modal-match-row">
-          <div class="modal-team-l" style="font-size:11px">${m.local}</div>
-          <div class="modal-score-box">${hasPred?p.gl:'?'}</div>
-          <div class="modal-score-sep">–</div>
-          <div class="modal-score-box">${hasPred?p.gv:'?'}</div>
-          <div class="modal-team-r" style="font-size:11px">${m.visitante}</div>
-          <div style="text-align:center"><span class="${ptsCls}">${ptsLbl}</span></div>
-        </div>`;
-      });
-    });
-  }
-
-  // ── Predicciones de Eliminatorias ──
-  html += `<div class="modal-section-title">⚡ Eliminatorias</div>`;
-
-  // Obtener rondas activas desde ELIM_ROUNDS
+  // ── Predicciones de Eliminatorias (se muestran PRIMERO) ──
+  let elimSec = `<div class="modal-section-title">⚡ Eliminatorias</div>`;
   const activeRounds = ELIM_ROUNDS.filter(r=>r.active && r.matches && r.matches.length);
   if(!activeRounds.length){
-    html += `<div class="modal-no-pred">Las rondas eliminatorias aún no han sido activadas.</div>`;
+    elimSec += `<div class="modal-no-pred">Las rondas eliminatorias aún no han sido activadas.</div>`;
   } else {
     activeRounds.forEach(round=>{
-      html += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
+      elimSec += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
         text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--dark3)">${round.name}</div>`;
       round.matches.forEach(m=>{
         if(!isLocked(m.id)) return;
@@ -1097,7 +1078,7 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
           const badgeCls = v.cls==='pts-exact'?'modal-pts-exact':v.cls==='pts-result'?'modal-pts-result':'modal-pts-miss';
           ptsBadge = `<span class="modal-pts-badge ${badgeCls}">${v.label}</span>`;
         }
-        html += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
+        elimSec += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px">
             <div style="flex:1;text-align:right;font-weight:600">${m.e1||'TBD'}</div>
             <div style="text-align:center;min-width:80px">
@@ -1115,7 +1096,40 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
     });
   }
 
-  html += `<div style="height:8px"></div>`;
+  // ── Predicciones de Grupos (después) ──
+  let groupSec = `<div class="modal-section-title">⚽ Fase de Grupos</div>`;
+  const lockedMatches = Object.values(GRUPOS_DATA).flatMap(g=>g.partidos).filter(m=>isLocked(m.id));
+  if(lockedMatches.length===0){
+    groupSec += `<div class="modal-no-pred">El torneo aún no ha iniciado — sin partidos bloqueados.</div>`;
+  } else {
+    Object.entries(GRUPOS_DATA).forEach(([grp, data])=>{
+      const gMatchesLocked = data.partidos.filter(m=>isLocked(m.id));
+      if(!gMatchesLocked.length) return;
+      groupSec += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
+        text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--dark3)">Grupo ${grp}</div>`;
+      gMatchesLocked.forEach(m=>{
+        const p = gPreds[m.id]||{};
+        const hasPred = p.gl!==undefined && p.gv!==undefined;
+        const pts = calcGroupPts(p, m);
+        let ptsCls='modal-pts-none', ptsLbl='·';
+        if(pts===3){ptsCls='modal-pts-badge modal-pts-exact';ptsLbl='+3';}
+        else if(pts===1){ptsCls='modal-pts-badge modal-pts-result';ptsLbl='+1';}
+        else if(pts===0){ptsCls='modal-pts-badge modal-pts-miss';ptsLbl='0';}
+
+        groupSec += `<div class="modal-match-row">
+          <div class="modal-team-l" style="font-size:11px">${m.local}</div>
+          <div class="modal-score-box">${hasPred?p.gl:'?'}</div>
+          <div class="modal-score-sep">–</div>
+          <div class="modal-score-box">${hasPred?p.gv:'?'}</div>
+          <div class="modal-team-r" style="font-size:11px">${m.visitante}</div>
+          <div style="text-align:center"><span class="${ptsCls}">${ptsLbl}</span></div>
+        </div>`;
+      });
+    });
+  }
+
+  // Eliminatorias primero, luego grupos
+  html += elimSec + groupSec + `<div style="height:8px"></div>`;
   body.innerHTML = html;
 }
 
