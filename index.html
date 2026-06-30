@@ -720,7 +720,7 @@ const ELIM_FIXTURES = {
 // matches is empty until organizer fills the bracket in Sheets.
 // PUNTOS INDEPENDIENTES que SE SUMAN:
 //   ptsAvanza   = acertar el equipo que avanza (clasificado)
-//   ptsMarcador = acertar el marcador exacto a 90' (aunque falles quién avanza)
+//   ptsMarcador = acertar el marcador exacto final, 90 min + tiempo extra (aunque falles quién avanza)
 const ELIM_ROUNDS = [
   {name:'16avos de Final', key:'16avos',  ptsAvanza:2,  ptsMarcador:5,  active:false, matches:[]},
   {name:'Octavos de Final',key:'Octavos', ptsAvanza:4,  ptsMarcador:9,  active:false, matches:[]},
@@ -1265,7 +1265,7 @@ async function saveGroupPreds(){
 // ── ELIMINATORIAS: cálculo de puntos (INDEPENDIENTES y ADITIVOS) ──
 // Reglas:
 //  • Acertar el equipo que avanza → +ptsAvanza
-//  • Acertar el marcador exacto a 90' → +ptsMarcador  (aunque falles quién avanza)
+//  • Acertar el marcador exacto final (90 min + tiempo extra) → +ptsMarcador  (aunque falles quién avanza)
 //  • Los dos son independientes y SE SUMAN. Si aciertas ambos = ptsAvanza + ptsMarcador.
 //  • Si no aciertas nada → 0
 
@@ -1333,12 +1333,12 @@ function renderElimPredictions() {
     container.innerHTML = `
       <div style="background:rgba(242,201,76,0.07);border:1px solid rgba(242,201,76,0.2);
         border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--gold)">
-        📋 <b>Reglas eliminatorias:</b> predice el marcador a 90' (puede ser empate)
+        📋 <b>Reglas eliminatorias:</b> predice el marcador final (90 min + tiempo extra)
         y el equipo que avanza.<br>
         <span style="color:var(--muted)">
           Los puntos son <b style="color:var(--text)">independientes y se suman</b>:<br>
           ✅ Acertar quién avanza = <b style="color:var(--text)">pts de avance</b> &nbsp;·&nbsp;
-          🏟 Acertar el marcador exacto a 90' = <b style="color:var(--text)">pts de marcador</b> (aunque falles quién avanza)<br>
+          🏟 Acertar el marcador exacto (90 min + tiempo extra) = <b style="color:var(--text)">pts de marcador</b> (aunque falles quién avanza)<br>
           <span style="font-size:11px">16avos: avanza 2 + marcador 5 (ambos 7) · Octavos: 4+9 (13) · Cuartos: 6+13 (19) · Semis: 9+18 (27) · 3°lugar: 5+10 (15) · Final: 12+24 (36)</span>
         </span>
       </div>
@@ -1408,11 +1408,6 @@ function renderElimPredictions() {
                   <option value="${m.e1}" ${winVal===m.e1?'selected':''}>${m.e1}</option>
                   <option value="${m.e2}" ${winVal===m.e2?'selected':''}>${m.e2}</option>
                 </select>
-                ${predTie && !lk
-                  ? `<div style="font-size:10px;color:var(--gold);margin-top:3px">
-                       ⚡ Empate en 90 min — ¿quién avanza?
-                     </div>`
-                  : ''}
                 ${!winVal && !lk
                   ? `<div style="font-size:10px;color:var(--red);margin-top:2px">
                        ⚠ Obligatorio
