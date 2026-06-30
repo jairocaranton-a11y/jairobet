@@ -873,23 +873,62 @@ function launchApp(){
 }
 
 // ── API ──
-// Caché en memoria con TTL: acelera los cambios de pestaña y evita
-// re-consultar el Apps Script. Guarda la PROMESA para deduplicar llamadas
-// simultáneas a la misma consulta. Se limpia al guardar predicciones.
-const _apiCache = new Map();
-const API_CACHE_TTL = 60000; // 60 s
-function clearApiCache(){ _apiCache.clear(); }
-async function apiGet(p, opts){
-  const qs = new URLSearchParams(p).toString();
-  const noCache = opts && opts.fresh;
-  const hit = _apiCache.get(qs);
-  if(!noCache && hit && (Date.now() - hit.t) < API_CACHE_TTL) return hit.p;
+// Caché con persistencia en localStorage + stale-while-revalidate:
+//   • FRESH_TTL: si el dato es reciente, se devuelve al instante (sin red).
+//   • STALE_TTL: si está viejo pero usable, se devuelve YA y se refresca por
+//     detrás; cuando llega lo nuevo (si cambió) se llama opts.onUpdate para
+//     re-renderizar. Sobrevive a recargas de página (localStorage).
+//   • Dedupe de llamadas simultáneas a la misma consulta.
+const _apiMem = new Map();      // qs -> {t, v}
+const _apiInflight = new Map(); // qs -> Promise
+const FRESH_TTL = 60000;          // 60 s: se considera fresco
+const STALE_TTL = 24*60*60*1000;  // 24 h: usable como stale-while-revalidate
+const LS_PREFIX = 'jbapi:';
+
+function _lsGet(qs){ try{ const r=localStorage.getItem(LS_PREFIX+qs); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function _lsSet(qs,e){ try{ localStorage.setItem(LS_PREFIX+qs, JSON.stringify(e)); }catch(e){} }
+function _cacheGet(qs){ let e=_apiMem.get(qs); if(!e){ e=_lsGet(qs); if(e) _apiMem.set(qs,e); } return e; }
+function _cacheSet(qs,v){ const e={t:Date.now(), v}; _apiMem.set(qs,e); _lsSet(qs,e); return e; }
+
+function _fetchFresh(qs){
+  if(_apiInflight.has(qs)) return _apiInflight.get(qs);
   const prom = fetch(`${API}?${qs}`)
     .then(r => r.json())
-    .catch(e => { _apiCache.delete(qs); throw e; });
-  _apiCache.set(qs, {t: Date.now(), p: prom});
+    .then(v => { _cacheSet(qs,v); _apiInflight.delete(qs); return v; })
+    .catch(e => { _apiInflight.delete(qs); throw e; });
+  _apiInflight.set(qs, prom);
   return prom;
 }
+
+async function apiGet(p, opts){
+  const qs = new URLSearchParams(p).toString();
+  const onUpdate = opts && opts.onUpdate;
+  const fresh    = opts && opts.fresh;   // forzar red
+  const e   = _cacheGet(qs);
+  const age = e ? (Date.now() - e.t) : Infinity;
+
+  if(!fresh && e && age < FRESH_TTL) return e.v;            // fresco → instantáneo
+
+  if(!fresh && e && age < STALE_TTL){                        // stale-while-revalidate
+    _fetchFresh(qs).then(v => {
+      if(onUpdate && JSON.stringify(v) !== JSON.stringify(e.v)) onUpdate(v);
+    }).catch(()=>{});
+    return e.v;                                              // devuelve lo viejo ya
+  }
+  return _fetchFresh(qs);                                    // sin caché usable → espera red
+}
+
+// Invalidación quirúrgica: borra de memoria y localStorage las consultas que cumplan el predicado.
+function invalidateApi(predicate){
+  for(const qs of Array.from(_apiMem.keys())) if(predicate(qs)) _apiMem.delete(qs);
+  try{
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i);
+      if(k && k.indexOf(LS_PREFIX)===0 && predicate(k.slice(LS_PREFIX.length))) localStorage.removeItem(k);
+    }
+  }catch(e){}
+}
+function clearApiCache(){ invalidateApi(()=>true); } // compat: limpia todo
 async function apiPost(d){
   // Route saves through GET to avoid CORS issues with Apps Script
   try {
@@ -897,7 +936,15 @@ async function apiPost(d){
     Object.entries(d).forEach(([k,v]) => params.append(k, v !== undefined && v !== null ? v : ''));
     const r = await fetch(`${API}?${params.toString()}`);
     const json = await r.json();
-    clearApiCache(); // invalidar caché tras un guardado
+    // Invalidación quirúrgica: un guardado solo afecta el ranking, las preds del
+    // usuario y las predicciones-de-todos. NO toca resultados ni rondas (no cambian).
+    const code = d.code || (currentUser && currentUser.code) || '';
+    invalidateApi(qs =>
+      qs.indexOf('action=getRanking') !== -1 ||
+      qs.indexOf('action=getAllPreds') !== -1 ||
+      (code && qs.indexOf('action=getGroupPreds') !== -1 && qs.indexOf('code=' + code) !== -1) ||
+      (code && qs.indexOf('action=getElimPreds')  !== -1 && qs.indexOf('code=' + code) !== -1)
+    );
     return json;
   } catch(e) {
     console.error('apiPost error:', e);
@@ -953,7 +1000,7 @@ function renderRankingPodium(r){
 async function renderRanking(){
   const list=document.getElementById('ranking-list');
   try{
-    const res=await apiGet({action:'getRanking'});
+    const res=await apiGet({action:'getRanking'}, {onUpdate:()=>renderRanking()});
     if(!res.ok||!res.ranking||!res.ranking.length){
       list.innerHTML='<div class="loading-msg">📊 El ranking aparecerá cuando haya predicciones guardadas.</div>';return;
     }
@@ -1572,12 +1619,14 @@ const GRUPOS_INFO = {
 
 async function renderTablaGrupos() {
   const container = document.getElementById('tabla-grupos-content');
-  container.innerHTML = '<div class="loading-msg"><div class="spinner"></div><br>Cargando resultados...</div>';
-  
+  // Spinner solo en la carga inicial; en refrescos por detrás no parpadea
+  if(!container.querySelector('.tabla-grupo'))
+    container.innerHTML = '<div class="loading-msg"><div class="spinner"></div><br>Cargando resultados...</div>';
+
   // Get real results from server
   let resultados = {};
   try {
-    const res = await apiGet({action:'getResultados'});
+    const res = await apiGet({action:'getResultados'}, {onUpdate:()=>renderTablaGrupos()});
     if (res.ok) resultados = res.resultados || {};
   } catch(e) {}
 
@@ -1835,7 +1884,7 @@ window.addEventListener('appinstalled', () => {
 // ── NUEVO: sincronizar marcadores reales del servidor en GRUPOS_DATA ──
 async function syncRealResults(){
   try{
-    const res = await apiGet({action:'getResultados'});
+    const res = await apiGet({action:'getResultados'}, {onUpdate:()=>syncRealResults().then(renderGroupPredictions)});
     if(res.ok && res.resultados){
       Object.values(GRUPOS_DATA).forEach(g=>(g.partidos||[]).forEach(m=>{
         const r = res.resultados[m.id];
