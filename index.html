@@ -722,12 +722,12 @@ const ELIM_FIXTURES = {
 //   ptsAvanza   = acertar el equipo que avanza (clasificado)
 //   ptsMarcador = acertar el marcador exacto a 90' (aunque falles quién avanza)
 const ELIM_ROUNDS = [
-  {name:'16avos de Final', key:'16avos',  ptsAvanza:2,  ptsMarcador:3,  active:false, matches:[]},
-  {name:'Octavos de Final',key:'Octavos', ptsAvanza:4,  ptsMarcador:5,  active:false, matches:[]},
-  {name:'Cuartos de Final',key:'Cuartos', ptsAvanza:6,  ptsMarcador:7,  active:false, matches:[]},
-  {name:'Semifinales',     key:'Semis',   ptsAvanza:9,  ptsMarcador:9,  active:false, matches:[]},
-  {name:'Tercer Lugar',    key:'3lugar',  ptsAvanza:5,  ptsMarcador:5,  active:false, matches:[]},
-  {name:'Gran Final',      key:'Final',   ptsAvanza:12, ptsMarcador:12, active:false, matches:[]},
+  {name:'16avos de Final', key:'16avos',  ptsAvanza:2,  ptsMarcador:5,  active:false, matches:[]},
+  {name:'Octavos de Final',key:'Octavos', ptsAvanza:4,  ptsMarcador:9,  active:false, matches:[]},
+  {name:'Cuartos de Final',key:'Cuartos', ptsAvanza:6,  ptsMarcador:13, active:false, matches:[]},
+  {name:'Semifinales',     key:'Semis',   ptsAvanza:9,  ptsMarcador:18, active:false, matches:[]},
+  {name:'Tercer Lugar',    key:'3lugar',  ptsAvanza:5,  ptsMarcador:10, active:false, matches:[]},
+  {name:'Gran Final',      key:'Final',   ptsAvanza:12, ptsMarcador:24, active:false, matches:[]},
 ];
 
 // STATE
@@ -1325,7 +1325,7 @@ function renderElimPredictions() {
           Los puntos son <b style="color:var(--text)">independientes y se suman</b>:<br>
           ✅ Acertar quién avanza = <b style="color:var(--text)">pts de avance</b> &nbsp;·&nbsp;
           🏟 Acertar el marcador exacto a 90' = <b style="color:var(--text)">pts de marcador</b> (aunque falles quién avanza)<br>
-          <span style="font-size:11px">16avos: avanza 2 + marcador 3 (máx 5) · Octavos: 4+5 (9) · Cuartos: 6+7 (13) · Semis: 9+9 (18) · 3°lugar: 5+5 (10) · Final: 12+12 (24)</span>
+          <span style="font-size:11px">16avos: avanza 2 + marcador 5 (ambos 7) · Octavos: 4+9 (13) · Cuartos: 6+13 (19) · Semis: 9+18 (27) · 3°lugar: 5+10 (15) · Final: 12+24 (36)</span>
         </span>
       </div>
     ` + activeRounds.map(r => `
