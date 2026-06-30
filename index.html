@@ -715,16 +715,19 @@ const ELIM_FIXTURES = {
 };
 
 // ELIM_ROUNDS is loaded dynamically from Google Sheets by the organizer.
-// Structure per round: { name, pts, ptsExact, active, matches[] }
+// Structure per round: { name, ptsAvanza, ptsMarcador, active, matches[] }
 // Each match: { id, e1, e2, gl, gv, winner, date }
 // matches is empty until organizer fills the bracket in Sheets.
+// PUNTOS INDEPENDIENTES que SE SUMAN:
+//   ptsAvanza   = acertar el equipo que avanza (clasificado)
+//   ptsMarcador = acertar el marcador exacto a 90' (aunque falles quién avanza)
 const ELIM_ROUNDS = [
-  {name:'16avos de Final', key:'16avos',  pts:2,  ptsExact:5,  active:false, matches:[]},
-  {name:'Octavos de Final',key:'Octavos', pts:4,  ptsExact:9,  active:false, matches:[]},
-  {name:'Cuartos de Final',key:'Cuartos', pts:6,  ptsExact:13, active:false, matches:[]},
-  {name:'Semifinales',     key:'Semis',   pts:9,  ptsExact:18, active:false, matches:[]},
-  {name:'Tercer Lugar',    key:'3lugar',  pts:5,  ptsExact:10, active:false, matches:[]},
-  {name:'Gran Final',      key:'Final',   pts:12, ptsExact:24, active:false, matches:[]},
+  {name:'16avos de Final', key:'16avos',  ptsAvanza:2,  ptsMarcador:3,  active:false, matches:[]},
+  {name:'Octavos de Final',key:'Octavos', ptsAvanza:4,  ptsMarcador:5,  active:false, matches:[]},
+  {name:'Cuartos de Final',key:'Cuartos', ptsAvanza:6,  ptsMarcador:7,  active:false, matches:[]},
+  {name:'Semifinales',     key:'Semis',   ptsAvanza:9,  ptsMarcador:9,  active:false, matches:[]},
+  {name:'Tercer Lugar',    key:'3lugar',  ptsAvanza:5,  ptsMarcador:5,  active:false, matches:[]},
+  {name:'Gran Final',      key:'Final',   ptsAvanza:12, ptsMarcador:12, active:false, matches:[]},
 ];
 
 // STATE
@@ -1087,17 +1090,18 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
         const winnerStr = p.winner||'?';
         const hasResult = m.winner && m.gl!==null && m.gv!==null;
         const winnerOk = hasResult && p.winner && p.winner===m.winner;
-        let ptsBadge = '';
+        let ptsBadge = '', scoreExact = false;
         if(hasResult){
-          const {cls,label} = calcElimPts(m, round, p);
-          const badgeCls = cls==='pts-exact'?'modal-pts-exact':cls==='pts-result'?'modal-pts-result':'modal-pts-miss';
-          ptsBadge = `<span class="modal-pts-badge ${badgeCls}">${label}</span>`;
+          const v = calcElimPts(m, round, p);
+          scoreExact = v.scoreExact;
+          const badgeCls = v.cls==='pts-exact'?'modal-pts-exact':v.cls==='pts-result'?'modal-pts-result':'modal-pts-miss';
+          ptsBadge = `<span class="modal-pts-badge ${badgeCls}">${v.label}</span>`;
         }
         html += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px">
             <div style="flex:1;text-align:right;font-weight:600">${m.e1||'TBD'}</div>
             <div style="text-align:center;min-width:80px">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--text)">${scoreStr}</div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:${scoreExact?'var(--green)':'var(--text)'}">${scoreStr}</div>
               <div class="modal-winner-chip" style="color:${winnerOk?'var(--gold)':'var(--muted)'}">🏆 ${winnerStr}</div>
             </div>
             <div style="flex:1;text-align:left;font-weight:600">${m.e2||'TBD'}</div>
@@ -1244,12 +1248,12 @@ async function saveGroupPreds(){
 }
 
 // ── ELIM ──
-// ── ELIMINATORIAS: cálculo de puntos ──
+// ── ELIMINATORIAS: cálculo de puntos (INDEPENDIENTES y ADITIVOS) ──
 // Reglas:
-//  • Marcador 90 min (puede ser empate) + ganador OBLIGATORIO
-//  • Marcador exacto (90 min) + ganador correcto → ptsExact
-//  • Solo ganador correcto (marcador diferente) → pts
-//  • Ganador incorrecto → 0
+//  • Acertar el equipo que avanza → +ptsAvanza
+//  • Acertar el marcador exacto a 90' → +ptsMarcador  (aunque falles quién avanza)
+//  • Los dos son independientes y SE SUMAN. Si aciertas ambos = ptsAvanza + ptsMarcador.
+//  • Si no aciertas nada → 0
 
 // Fecha corta para eliminatorias. El servidor puede devolver un Date completo
 // ("Sun Jun 28 2026 14:00:00 GMT-0500 (...)"); preferimos la fecha limpia de
@@ -1264,16 +1268,29 @@ function fmtElimDate(m) {
 }
 
 function calcElimPts(m, r, pred) {
-  if (!pred || !pred.winner) return {cls:'pts-miss', label:'·'};
-  if (pred.winner === m.winner) {
-    const glN = parseInt(pred.gl), gvN = parseInt(pred.gv);
-    const exact = !isNaN(glN) && !isNaN(gvN) &&
-                  pred.gl !== '' && pred.gv !== '' &&
-                  glN === m.gl && gvN === m.gv;
-    if (exact) return {cls:'pts-exact',  label:'⭐ ' + r.ptsExact};
-    return           {cls:'pts-result', label:String(r.pts)};
-  }
-  return {cls:'pts-miss', label:'0'};
+  // Sin resultado real todavía → no se puede puntuar
+  if (m.winner == null || m.winner === '' || m.gl == null || m.gv == null)
+    return {cls:'pts-miss', label:'·'};
+
+  const av = r.ptsAvanza   != null ? r.ptsAvanza   : 0;
+  const mc = r.ptsMarcador != null ? r.ptsMarcador : 0;
+
+  const winnerOk = pred && pred.winner && pred.winner === m.winner;
+  const glN = parseInt(pred && pred.gl), gvN = parseInt(pred && pred.gv);
+  const scoreExact = pred && pred.gl !== '' && pred.gv !== '' &&
+                     !isNaN(glN) && !isNaN(gvN) &&
+                     glN === m.gl && gvN === m.gv;
+
+  let pts = 0;
+  if (winnerOk)   pts += av;
+  if (scoreExact) pts += mc;
+
+  let cls = 'pts-miss';
+  if (winnerOk && scoreExact) cls = 'pts-exact';
+  else if (pts > 0)           cls = 'pts-result';
+
+  const label = pts > 0 ? (scoreExact ? '⭐ ' + pts : '+' + pts) : '0';
+  return {cls, label, pts, winnerOk, scoreExact};
 }
 
 function renderElimPredictions() {
@@ -1302,19 +1319,20 @@ function renderElimPredictions() {
     container.innerHTML = `
       <div style="background:rgba(242,201,76,0.07);border:1px solid rgba(242,201,76,0.2);
         border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--gold)">
-        📋 <b>Reglas eliminatorias:</b> predice el marcador a 90 min (puede ser empate)
-        y el equipo ganador que avanza — ambos son obligatorios.<br>
+        📋 <b>Reglas eliminatorias:</b> predice el marcador a 90' (puede ser empate)
+        y el equipo que avanza.<br>
         <span style="color:var(--muted)">
-          🏅 Solo ganador correcto = pts normales &nbsp;·&nbsp;
-          ⭐ Marcador exacto + ganador = pts dobles<br>
-          16avos 2/5 · Octavos 4/9 · Cuartos 6/13 · Semis 9/18 · 3°lugar 5/10 · Final 12/24
+          Los puntos son <b style="color:var(--text)">independientes y se suman</b>:<br>
+          ✅ Acertar quién avanza = <b style="color:var(--text)">pts de avance</b> &nbsp;·&nbsp;
+          🏟 Acertar el marcador exacto a 90' = <b style="color:var(--text)">pts de marcador</b> (aunque falles quién avanza)<br>
+          <span style="font-size:11px">16avos: avanza 2 + marcador 3 (máx 5) · Octavos: 4+5 (9) · Cuartos: 6+7 (13) · Semis: 9+9 (18) · 3°lugar: 5+5 (10) · Final: 12+12 (24)</span>
         </span>
       </div>
     ` + activeRounds.map(r => `
       <div class="elim-section">
         <div class="elim-title">${r.name}
           <span style="font-size:11px;color:var(--muted)">
-            ganador=${r.pts}pts &nbsp;·&nbsp; exacto+ganador=${r.ptsExact}pts
+            avanza=${r.ptsAvanza}pts &nbsp;·&nbsp; marcador exacto=${r.ptsMarcador}pts
           </span>
         </div>
         <div style="overflow-x:auto">
@@ -1730,6 +1748,7 @@ function renderElimAllPreds(m, r, preds) {
         ${m.e2}
       </div>
       ${hasResult ? `<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">Avanza: <b style="color:var(--gold)">${m.winner}</b></div>` : ''}
+      ${hasResult ? `<div style="text-align:center;font-size:10px;color:var(--muted);margin-top:6px">🏟 marcador exacto = ${r.ptsMarcador} pts &nbsp;·&nbsp; ✅ quién avanza = ${r.ptsAvanza} pts &nbsp;(se suman)</div>` : ''}
     </div>
     <table class="pred-all-table">
       <tr>
@@ -1740,15 +1759,14 @@ function renderElimAllPreds(m, r, preds) {
       </tr>
       ${preds.map(p => {
         const hasPred = p.gl !== '' && p.gv !== '';
-        let pts = '', ptsClass = 'pts-miss';
+        let pts = '', ptsClass = 'pts-miss', scoreExact = false, winnerOk = false;
         if (hasResult) {
           const v = calcElimPts(m, r, {winner: p.winner, gl: p.gl, gv: p.gv});
-          pts = v.label; ptsClass = v.cls;
+          pts = v.label; ptsClass = v.cls; scoreExact = v.scoreExact; winnerOk = v.winnerOk;
         }
-        const winnerOk = hasResult && p.winner && p.winner === m.winner;
         return `<tr>
           <td>${p.name}</td>
-          <td class="score-pred">${hasPred ? p.gl+' – '+p.gv : '—'}</td>
+          <td class="score-pred" style="${scoreExact?'color:var(--green);font-weight:700':''}">${hasPred ? p.gl+' – '+p.gv : '—'}</td>
           <td style="text-align:center;font-size:11px;font-weight:600;color:${winnerOk?'var(--gold)':'var(--text)'}">${p.winner || '—'}</td>
           ${hasResult ? `<td class="${ptsClass}" style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px">${pts}</td>` : ''}
         </tr>`;
