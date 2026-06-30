@@ -1003,11 +1003,11 @@ function closePredModal(e){
 }
 
 function calcGroupPts(pred, match){
-  if(pred.gl===undefined||pred.gv===undefined) return null;
+  if(pred.gl===undefined||pred.gv===undefined||pred.gl===''||pred.gv==='') return null;
   if(match.gl===null||match.gv===null) return null;
-  const rD=match.gl-match.gv, pD=pred.gl-pred.gv;
-  if(pred.gl===match.gl&&pred.gv===match.gv) return 3;
-  if(Math.sign(pD)===Math.sign(rD)) return 1;
+  const pg=Number(pred.gl), pv=Number(pred.gv), mg=Number(match.gl), mv=Number(match.gv);
+  if(pg===mg&&pv===mv) return 3;
+  if(Math.sign(pg-pv)===Math.sign(mg-mv)) return 1;
   return 0;
 }
 
@@ -1082,16 +1082,30 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
       round.matches.forEach(m=>{
         if(!isLocked(m.id)) return;
         const p = ePreds[m.id]||{};
-        const hasPred = p.gl!==undefined && p.gv!==undefined;
+        const hasPred = p.gl!==undefined && p.gv!==undefined && p.gl!=='' && p.gv!=='';
         const scoreStr = hasPred ? `${p.gl}–${p.gv}` : '?–?';
         const winnerStr = p.winner||'?';
-        html += `<div class="modal-elim-row">
-          <div style="text-align:right;font-size:11px;font-weight:500">${m.e1||'TBD'}</div>
-          <div style="text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--muted)">${scoreStr}</div>
-            <div class="modal-winner-chip">🏆 ${winnerStr}</div>
+        const hasResult = m.winner && m.gl!==null && m.gv!==null;
+        const winnerOk = hasResult && p.winner && p.winner===m.winner;
+        let ptsBadge = '';
+        if(hasResult){
+          const {cls,label} = calcElimPts(m, round, p);
+          const badgeCls = cls==='pts-exact'?'modal-pts-exact':cls==='pts-result'?'modal-pts-result':'modal-pts-miss';
+          ptsBadge = `<span class="modal-pts-badge ${badgeCls}">${label}</span>`;
+        }
+        html += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+            <div style="flex:1;text-align:right;font-weight:600">${m.e1||'TBD'}</div>
+            <div style="text-align:center;min-width:80px">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--text)">${scoreStr}</div>
+              <div class="modal-winner-chip" style="color:${winnerOk?'var(--gold)':'var(--muted)'}">🏆 ${winnerStr}</div>
+            </div>
+            <div style="flex:1;text-align:left;font-weight:600">${m.e2||'TBD'}</div>
+            ${hasResult ? `<div style="min-width:42px;text-align:center">${ptsBadge}</div>` : ''}
           </div>
-          <div style="text-align:left;font-size:11px;font-weight:500">${m.e2||'TBD'}</div>
+          ${hasResult ? `<div style="text-align:center;font-size:10px;color:var(--muted);margin-top:5px">
+            Real: <b style="color:var(--text)">${m.gl}–${m.gv}</b> · avanza <b style="color:var(--gold)">${m.winner}</b>
+          </div>` : `<div style="text-align:center;font-size:10px;color:var(--muted);margin-top:4px">⏳ Sin resultado aún</div>`}
         </div>`;
       });
     });
@@ -1611,6 +1625,21 @@ async function initPredMatchSelect() {
 
   sel.innerHTML = '<option value="">— Elige un partido —</option>';
 
+  // ── Eliminatorias primero (rondas activas, solo partidos ya iniciados) ──
+  ELIM_ROUNDS.filter(r => r.active && r.matches.length).forEach(r => {
+    const rMatches = r.matches.filter(m => isLocked(m.id));
+    if (!rMatches.length) return;
+    const og = document.createElement('optgroup');
+    og.label = `⚡ ${r.name}`;
+    rMatches.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = `${m.id}: ${m.e1} vs ${m.e2}`;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+
   // ── Fase de grupos (solo partidos ya iniciados) ──
   for (const [grp, data] of Object.entries(GRUPOS_DATA)) {
     const grpMatches = data.partidos.filter(m => isLocked(m.id));
@@ -1625,21 +1654,6 @@ async function initPredMatchSelect() {
     });
     sel.appendChild(og);
   }
-
-  // ── Eliminatorias (rondas activas, solo partidos ya iniciados) ──
-  ELIM_ROUNDS.filter(r => r.active && r.matches.length).forEach(r => {
-    const rMatches = r.matches.filter(m => isLocked(m.id));
-    if (!rMatches.length) return;
-    const og = document.createElement('optgroup');
-    og.label = `⚡ ${r.name}`;
-    rMatches.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = `${m.id}: ${m.e1} vs ${m.e2}`;
-      og.appendChild(opt);
-    });
-    sel.appendChild(og);
-  });
 }
 
 async function renderAllPredictions() {
