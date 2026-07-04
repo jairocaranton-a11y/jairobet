@@ -902,12 +902,13 @@ function _fetchFresh(qs){
 
 async function apiGet(p, opts){
   const qs = new URLSearchParams(p).toString();
-  const onUpdate = opts && opts.onUpdate;
-  const fresh    = opts && opts.fresh;   // forzar red
+  const onUpdate   = opts && opts.onUpdate;
+  const fresh      = opts && opts.fresh;        // forzar red (espera)
+  const revalidate = opts && opts.revalidate;   // devuelve caché YA pero siempre revalida en 2º plano
   const e   = _cacheGet(qs);
   const age = e ? (Date.now() - e.t) : Infinity;
 
-  if(!fresh && e && age < FRESH_TTL) return e.v;            // fresco → instantáneo
+  if(!fresh && !revalidate && e && age < FRESH_TTL) return e.v;  // fresco → instantáneo
 
   if(!fresh && e && age < STALE_TTL){                        // stale-while-revalidate
     _fetchFresh(qs).then(v => {
@@ -1057,7 +1058,13 @@ function openPredModal(code, name, champion, pos, total, ptsGrupos, ptsElim, pts
   ]).then(([gp, ep])=>{
     const gPreds = gp.ok ? (gp.preds||{}) : {};
     const ePreds = ep.ok ? (ep.preds||{}) : {};
-    renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, ptsCampeon, gPreds, ePreds);
+    // Re-render que solo aplica si el modal sigue abierto (para SWR de resultados)
+    const rerender = () => {
+      if (document.getElementById('pred-modal-overlay').classList.contains('open'))
+        renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, ptsCampeon, gPreds, ePreds);
+    };
+    // Refresca los resultados de eliminatorias (revalida) y re-renderiza al llegar lo nuevo
+    loadElimRounds(rerender).then(rerender);
   }).catch(()=>{
     document.getElementById('pred-modal-body').innerHTML =
       '<div class="loading-msg">❌ Error al cargar predicciones. Intenta de nuevo.</div>';
@@ -1358,8 +1365,8 @@ function renderElimPredictions() {
   const pub = currentUser?.code === 'PUBLIC';
   const container = document.getElementById('elim-predictions');
 
-  // Load dynamic rounds from server, then render
-  loadElimRounds().then(() => {
+  // Load dynamic rounds from server, then render (revalida y re-renderiza si cambian resultados)
+  loadElimRounds(renderElimPredictions).then(() => {
     const activeRounds = ELIM_ROUNDS.filter(r => r.active && r.matches.length > 0).reverse(); // ronda más reciente primero
 
     if (!activeRounds.length) {
@@ -1472,19 +1479,29 @@ function renderElimPredictions() {
   });
 }
 
-// Load rounds data from Google Sheets via API
-async function loadElimRounds() {
-  try {
-    const res = await apiGet({action:'getElimRounds'});
-    if (res.ok && res.rounds) {
-      res.rounds.forEach(serverRound => {
-        const local = ELIM_ROUNDS.find(r => r.key === serverRound.key);
-        if (local) {
-          local.active  = serverRound.active;
-          local.matches = serverRound.matches || [];
-        }
-      });
+// Aplica las rondas del servidor al global ELIM_ROUNDS (marcadores/ganador reales).
+function _applyElimRounds(rounds) {
+  (rounds || []).forEach(serverRound => {
+    const local = ELIM_ROUNDS.find(r => r.key === serverRound.key);
+    if (local) {
+      local.active  = serverRound.active;
+      local.matches = serverRound.matches || [];
     }
+  });
+}
+
+// Carga las rondas de eliminatorias. Usa revalidación en 2º plano: muestra lo
+// cacheado al instante y, si llegó un resultado nuevo de la hoja, re-aplica y
+// llama onFresh() para re-renderizar la vista que corresponda.
+async function loadElimRounds(onFresh) {
+  try {
+    const res = await apiGet({action:'getElimRounds'}, {
+      revalidate: true,
+      onUpdate: (v) => {
+        if (v && v.ok && v.rounds) { _applyElimRounds(v.rounds); if (onFresh) onFresh(); }
+      }
+    });
+    if (res && res.ok && res.rounds) _applyElimRounds(res.rounds);
   } catch(e) {
     // If server unavailable, rounds stay empty/inactive
   }
@@ -1698,8 +1715,9 @@ async function initPredMatchSelect() {
   const sel = document.getElementById('pred-match-select');
   if (!sel) return;
 
-  // Asegurar que las rondas eliminatorias estén cargadas desde el servidor
-  await loadElimRounds();
+  // Asegurar que las rondas eliminatorias estén cargadas (revalida y refresca el
+  // partido seleccionado si cambia un resultado; no reconstruye el selector para no perder la selección)
+  await loadElimRounds(() => renderAllPredictions());
 
   sel.innerHTML = '<option value="">— Elige un partido —</option>';
 
@@ -1905,7 +1923,8 @@ window.showTab = function(id, el) {
   if (id === 'tabla')        renderTablaGrupos();
   if (id === 'predicciones') initPredMatchSelect();
   if (id === 'ranking')      renderRanking();
-  if (id === 'bracket')      renderBracket();
+  if (id === 'eliminacion')  renderElimPredictions();
+  if (id === 'bracket')      loadElimRounds(renderBracket).then(renderBracket);
   if (id === 'grupos')       syncRealResults().then(renderGroupPredictions);
 };
 
