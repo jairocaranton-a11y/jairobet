@@ -2001,19 +2001,27 @@ document.addEventListener('click',      startMusicOnInteraction, {once: true});
 document.addEventListener('touchstart', startMusicOnInteraction, {once: true});
 
 // ── BANNER PRÓXIMOS PARTIDOS ──
-function renderUpcomingBanner() {
+async function renderUpcomingBanner() {
+  // Asegura que las rondas eliminatorias (16avos, octavos, etc.) estén cargadas
+  // para mostrar los nombres reales de los equipos en el banner.
+  await loadElimRounds();
+
   const now    = new Date();
   const in24h  = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  // Mapa rápido id -> { local, visitante, grupo }
+  // Mapa rápido id -> { local, visitante, grupo, ronda }
   const matchInfo = {};
   Object.entries(GRUPOS_DATA).forEach(([grp, data]) => {
     data.partidos.forEach(m => { matchInfo[m.id] = { local: m.local, visitante: m.visitante, grupo: grp }; });
   });
-  // Cruces eliminatorios (16avos, etc.) — etiqueta de ronda en lugar de grupo
+  // Cruces eliminatorios fijos (respaldo por si aún no cargan del servidor)
   Object.entries(ELIM_FIXTURES).forEach(([id, f]) => {
     matchInfo[id] = { local: f.local, visitante: f.visitante, grupo: null, ronda: f.ronda };
   });
+  // Cruces eliminatorios desde el servidor (autoridad) — cubre octavos y demás rondas
+  ELIM_ROUNDS.forEach(r => (r.matches || []).forEach(m => {
+    if (m.e1 && m.e2) matchInfo[m.id] = { local: m.e1, visitante: m.e2, grupo: null, ronda: r.name };
+  }));
 
   // Filtrar partidos en las próximas 24h
   const upcoming = [];
