@@ -1531,10 +1531,12 @@ async function saveElimPreds(){
   const errEl=document.getElementById('save-e-err');
   msg.style.display='none'; errEl.style.display='none';
 
-  // Solo predicciones con ganador definido
-  const pending = Object.entries(elimPreds).filter(([,p]) => p && p.winner);
+  // Solo predicciones con ganador definido y de partidos AÚN ABIERTOS (no bloqueados).
+  // Así se guardan únicamente los de la ronda vigente (p.ej. octavos) y no se
+  // re-envían rondas ya jugadas como 16avos.
+  const pending = Object.entries(elimPreds).filter(([matchId,p]) => p && p.winner && !isLocked(matchId));
   if(!pending.length){
-    msg.textContent='⚠️ No hay predicciones con ganador para guardar';
+    msg.textContent='⚠️ No hay partidos abiertos con predicción para guardar';
     msg.style.display='inline'; setTimeout(()=>msg.style.display='none',3000);
     return;
   }
