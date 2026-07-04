@@ -1115,10 +1115,10 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
     elimSec += `<div class="modal-no-pred">Las rondas eliminatorias aún no han sido activadas.</div>`;
   } else {
     activeRounds.forEach(round=>{
-      elimSec += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
-        text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--dark3)">${round.name}</div>`;
+      // Mostrar partidos ya iniciados (bloqueados) o que ya tengan resultado.
+      let roundRows = '';
       round.matches.forEach(m=>{
-        if(!isLocked(m.id)) return;
+        if(!isLocked(m.id) && !m.winner) return;
         const p = ePreds[m.id]||{};
         const hasPred = p.gl!==undefined && p.gv!==undefined && p.gl!=='' && p.gv!=='';
         const scoreStr = hasPred ? `${p.gl}–${p.gv}` : '?–?';
@@ -1132,7 +1132,7 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
           const badgeCls = v.cls==='pts-exact'?'modal-pts-exact':v.cls==='pts-result'?'modal-pts-result':'modal-pts-miss';
           ptsBadge = `<span class="modal-pts-badge ${badgeCls}">${v.label}</span>`;
         }
-        elimSec += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
+        roundRows += `<div style="padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.04)">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px">
             <div style="flex:1;text-align:right;font-weight:600">${m.e1||'TBD'}</div>
             <div style="text-align:center;min-width:80px">
@@ -1147,6 +1147,11 @@ function renderPredModalBody(name, champion, pos, total, ptsGrupos, ptsElim, pts
           </div>` : `<div style="text-align:center;font-size:10px;color:var(--muted);margin-top:4px">⏳ Sin resultado aún</div>`}
         </div>`;
       });
+      // Solo mostrar el encabezado de la ronda si hay partidos que mostrar
+      if(roundRows){
+        elimSec += `<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;
+          text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--dark3)">${round.name}</div>` + roundRows;
+      }
     });
   }
 
@@ -1721,9 +1726,9 @@ async function initPredMatchSelect() {
 
   sel.innerHTML = '<option value="">— Elige un partido —</option>';
 
-  // ── Eliminatorias primero (rondas activas, solo partidos ya iniciados) ──
+  // ── Eliminatorias primero (rondas activas: partidos ya iniciados o con resultado) ──
   ELIM_ROUNDS.filter(r => r.active && r.matches.length).reverse().forEach(r => { // ronda más reciente primero
-    const rMatches = r.matches.filter(m => isLocked(m.id));
+    const rMatches = r.matches.filter(m => isLocked(m.id) || m.winner);
     if (!rMatches.length) return;
     const og = document.createElement('optgroup');
     og.label = `⚡ ${r.name}`;
