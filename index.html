@@ -422,6 +422,35 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
   background:rgba(242,201,76,0.1); border:1px solid rgba(242,201,76,0.2);
   border-radius:20px; padding:3px 9px; white-space:nowrap;
 }
+
+/* ── ESTADÍSTICAS ── */
+.stats-section-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--gold);
+  margin:18px 0 8px;display:flex;align-items:center;gap:8px;}
+.stats-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.stats-note{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+.evo-wrap{overflow-x:auto;background:var(--dark3);border:1px solid var(--border);border-radius:11px;padding:12px 8px 6px;}
+.evo-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px;font-size:11px;color:var(--muted);}
+.evo-legend span{display:inline-flex;align-items:center;gap:5px;}
+.evo-legend i{width:14px;height:3px;border-radius:2px;display:inline-block;}
+.stats-summary{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px;}
+.stats-pill{background:var(--dark3);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--muted);}
+.stats-pill b{color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:16px;margin-right:4px;}
+.ceil-row{display:grid;grid-template-columns:26px 1fr;gap:9px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border);}
+.ceil-row.me{background:rgba(242,201,76,0.06);border-radius:8px;}
+.ceil-pos{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--muted);text-align:center;}
+.ceil-main{min-width:0;}
+.ceil-head{display:flex;align-items:baseline;gap:7px;margin-bottom:5px;flex-wrap:wrap;}
+.ceil-name{font-weight:600;font-size:13px;}
+.ceil-state{font-size:10px;font-weight:700;letter-spacing:.5px;padding:1px 7px;border-radius:20px;}
+.ceil-state.alive{color:var(--green);background:rgba(39,174,96,0.13);}
+.ceil-state.out{color:var(--red);background:rgba(235,87,87,0.13);}
+.ceil-meta{font-size:11px;color:var(--muted);margin-left:auto;}
+.ceil-bar{position:relative;height:16px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden;}
+.ceil-fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:5px;}
+.ceil-potential{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,rgba(242,201,76,0.16),rgba(242,201,76,0.16) 5px,transparent 5px,transparent 10px);}
+.ceil-leader{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.7;}
+.ceil-nums{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:10px;}
+.ceil-nums b{color:var(--text);}
 </style>
 </head>
 <body>
@@ -546,6 +575,7 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
     <button class="tab" onclick="showTab('bracket',this)">🎯 Bracket</button>
     <button class="tab" onclick="showTab('tabla',this)">📊 Tabla</button>
     <button class="tab" onclick="showTab('predicciones',this)">👁️ Predicciones</button>
+    <button class="tab" onclick="showTab('estadisticas',this)">📈 Estadísticas</button>
   </div>
 
   <div id="panel-ranking" class="panel active">
@@ -629,6 +659,13 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
         </select>
       </div>
       <div id="all-predictions-content"></div>
+    </div>
+  </div>
+
+  <!-- ═══ ESTADÍSTICAS ═══ -->
+  <div id="panel-estadisticas" class="panel">
+    <div class="content" id="estadisticas-content">
+      <div class="loading-msg"><div class="spinner"></div><br>Cargando estadísticas…</div>
     </div>
   </div>
 
@@ -1005,6 +1042,7 @@ async function renderRanking(){
     if(!res.ok||!res.ranking||!res.ranking.length){
       list.innerHTML='<div class="loading-msg">📊 El ranking aparecerá cuando haya predicciones guardadas.</div>';return;
     }
+    recordEvoSnapshot(res.ranking); // guarda un punto diario para el gráfico de evolución
     // Desempate: 1) exactos desc, 2) predicción final (se resuelve en backend)
     const r = res.ranking.slice().sort((a,b)=>{
       if(b.total !== a.total) return b.total - a.total;
@@ -1040,6 +1078,179 @@ async function renderRanking(){
       </div>`;
     }).join('');
   }catch(e){list.innerHTML='<div class="loading-msg">📊 Cargando ranking…</div>';}
+}
+
+// ══════════════════════════════════════════
+// ESTADÍSTICAS
+// ══════════════════════════════════════════
+
+// Guarda un snapshot diario de los totales para el gráfico de evolución (por dispositivo).
+function recordEvoSnapshot(ranking){
+  try{
+    const today = new Date().toLocaleDateString('en-CA', {timeZone:'America/Bogota'}); // YYYY-MM-DD
+    const t = {}; ranking.forEach(p => { t[p.code] = p.total; });
+    let evo = JSON.parse(localStorage.getItem('jb_evo')||'[]');
+    if(!Array.isArray(evo)) evo = [];
+    const last = evo[evo.length-1];
+    if(last && last.date === today) last.t = t;      // sobrescribe el de hoy
+    else evo.push({date: today, t});
+    if(evo.length > 30) evo = evo.slice(evo.length-30);
+    localStorage.setItem('jb_evo', JSON.stringify(evo));
+  }catch(e){}
+}
+
+// Máximo de puntos que CUALQUIERA puede aún sumar = MAX_PTS − (máximos ya resueltos).
+function _statsMaxRemaining(resultados){
+  let settled = 0;
+  const groupPlayed = resultados ? Object.keys(resultados).length : 0;
+  settled += 3 * groupPlayed;                        // cada partido de grupo vale máx 3
+  let finalPlayed = false;
+  ELIM_ROUNDS.forEach(rd => (rd.matches||[]).forEach(m => {
+    if(m.winner){ settled += (rd.ptsAvanza||0) + (rd.ptsMarcador||0); if(rd.key==='Final') finalPlayed = true; }
+  }));
+  if(finalPlayed) settled += 15;                     // campeón se define con la final
+  return Math.max(0, MAX_PTS - settled);
+}
+
+// Dibuja el gráfico de líneas (SVG inline, sin librería).
+function _drawEvoSVG(labels, series, myCode, leaderCode){
+  const W=680, H=240, padL=34, padR=66, padT=12, padB=24;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  let rawMax=1; series.forEach(s=>s.values.forEach(v=>{ if(v!=null && v>rawMax) rawMax=v; }));
+  const yMax=Math.max(20, Math.ceil(rawMax/20)*20);
+  const xAt=i=> padL + (labels.length<=1?0: i/(labels.length-1)*plotW);
+  const yAt=v=> padT + (1 - v/yMax)*plotH;
+
+  // Rejilla + etiquetas Y
+  let grid='';
+  for(let k=0;k<=4;k++){ const val=yMax*k/4, y=yAt(val);
+    grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`+
+          `<text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#7A8FA6">${Math.round(val)}</text>`;
+  }
+  // Etiquetas X
+  let xlab=''; labels.forEach((lb,i)=>{ xlab+=`<text x="${xAt(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#7A8FA6">${lb}</text>`; });
+
+  const pathOf=s=>{ let d='',started=false;
+    s.values.forEach((v,i)=>{ if(v==null) return; const cmd=started?'L':'M'; d+=`${cmd}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)} `; started=true; });
+    return d.trim();
+  };
+  const lastPoint=s=>{ for(let i=s.values.length-1;i>=0;i--){ if(s.values[i]!=null) return {x:xAt(i), y:yAt(s.values[i]), i}; } return null; };
+
+  const meIsLeader = myCode && myCode===leaderCode;
+  const isEmph=code=> code===myCode || code===leaderCode;
+
+  // 1) Líneas tenues (los demás)
+  let muted='';
+  series.forEach(s=>{ if(isEmph(s.code)) return; const d=pathOf(s); if(d) muted+=`<path d="${d}" fill="none" stroke="rgba(255,255,255,0.13)" stroke-width="1.4"/>`; });
+
+  // 2) Líder (blanco) — solo si no soy yo
+  let emph='';
+  if(leaderCode && !meIsLeader){
+    const s=series.find(x=>x.code===leaderCode);
+    if(s){ const d=pathOf(s), lp=lastPoint(s);
+      if(d){ emph+=`<path d="${d}" fill="none" stroke="#E8EDF5" stroke-width="2.4"/>`;
+        if(lp){ emph+=`<circle cx="${lp.x.toFixed(1)}" cy="${lp.y.toFixed(1)}" r="3.2" fill="#E8EDF5"/>`+
+          `<text x="${(lp.x+6).toFixed(1)}" y="${(lp.y+3).toFixed(1)}" font-size="10" font-weight="700" fill="#E8EDF5">${s.name.split(' ')[0]}</text>`; } } }
+  }
+  // 3) Mi línea (dorada)
+  if(myCode){
+    const s=series.find(x=>x.code===myCode);
+    if(s){ const d=pathOf(s), lp=lastPoint(s);
+      if(d){ emph+=`<path d="${d}" fill="none" stroke="#F2C94C" stroke-width="3"/>`;
+        if(lp){ emph+=`<circle cx="${lp.x.toFixed(1)}" cy="${lp.y.toFixed(1)}" r="3.6" fill="#F2C94C"/>`+
+          `<text x="${(lp.x+6).toFixed(1)}" y="${(lp.y+3).toFixed(1)}" font-size="10" font-weight="700" fill="#F2C94C">${meIsLeader?'Tú 👑':'Tú'}</text>`; } } }
+  }
+
+  const leaderName = leaderCode ? (series.find(x=>x.code===leaderCode)||{}).name : '';
+  let legend='<div class="evo-legend">';
+  if(myCode) legend+=`<span><i style="background:#F2C94C"></i>Tú</span>`;
+  if(leaderCode && !meIsLeader) legend+=`<span><i style="background:#E8EDF5"></i>Líder (${(leaderName||'').split(' ')[0]})</span>`;
+  legend+=`<span><i style="background:rgba(255,255,255,0.3)"></i>Demás</span></div>`;
+
+  return `<div class="evo-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    ${grid}${xlab}${muted}${emph}
+  </svg>${legend}</div>`;
+}
+
+// Construye datos del gráfico: snapshots diarios si hay ≥2, si no, evolución por fase.
+function _evoChart(ranking, myCode){
+  const nameByCode={}; ranking.forEach(p=>nameByCode[p.code]=p.name);
+  let evo=[]; try{ evo=JSON.parse(localStorage.getItem('jb_evo')||'[]'); if(!Array.isArray(evo)) evo=[]; }catch(e){ evo=[]; }
+  const leaderCode = ranking[0] ? ranking[0].code : null;
+  let labels, series, note;
+  if(evo.length>=2){
+    labels = evo.map(s=>s.date.slice(5));   // MM-DD
+    series = ranking.map(p=>({ code:p.code, name:nameByCode[p.code]||p.code,
+      values: evo.map(s => (s.t && s.t[p.code]!=null) ? s.t[p.code] : null) }));
+    note='';
+  } else {
+    labels = ['Grupos','+Elim','+Campeón'];
+    series = ranking.map(p=>({ code:p.code, name:p.name,
+      values:[p.grupos, p.grupos+p.elim, p.grupos+p.elim+p.campeon] }));
+    note='La línea diaria se irá construyendo con el uso; por ahora se muestra la evolución por fase.';
+  }
+  return (note?`<div class="stats-note">${note}</div>`:'') + _drawEvoSVG(labels, series, myCode, leaderCode);
+}
+
+async function renderEstadisticas(){
+  const box = document.getElementById('estadisticas-content');
+  try{
+    const [rk, rs] = await Promise.all([
+      apiGet({action:'getRanking'},    {onUpdate:()=>renderEstadisticas()}),
+      apiGet({action:'getResultados'}, {onUpdate:()=>renderEstadisticas()})
+    ]);
+    await loadElimRounds(renderEstadisticas);
+    if(!rk.ok || !rk.ranking || !rk.ranking.length){
+      box.innerHTML = '<div class="loading-msg">📈 Las estadísticas aparecerán cuando haya predicciones y resultados.</div>';
+      return;
+    }
+    const ranking = rk.ranking.slice().sort((a,b)=> (b.total-a.total) || ((b.exactos||0)-(a.exactos||0)));
+    const leaderTotal = ranking[0].total;
+    const maxRemaining = _statsMaxRemaining(rs.ok ? rs.resultados : {});
+    recordEvoSnapshot(ranking);
+    const myCode = currentUser && currentUser.code;
+
+    let html = `<div class="stats-section-title">📈 Evolución en puntos</div>`;
+    html += _evoChart(ranking, myCode);
+
+    html += `<div class="stats-section-title">🎯 ¿Aún puede ganar?</div>`;
+    html += `<div class="stats-summary">
+      <div class="stats-pill"><b>${maxRemaining}</b> puntos aún en juego</div>
+      <div class="stats-pill"><b>${leaderTotal}</b> pts · líder ${ranking[0].name.split(' ')[0]}</div>
+    </div>`;
+    html += `<div class="stats-note">El <b>techo</b> es el máximo posible de cada quien (puntos actuales + todo lo que aún puede sumar). Se marca 🔴 eliminado solo cuando ni con el techo alcanza al líder actual.</div>`;
+
+    const maxTecho = Math.max(1, leaderTotal + maxRemaining); // el líder define la barra más larga
+    html += ranking.map((p,i)=>{
+      const techo = p.total + maxRemaining;
+      const alive = techo >= leaderTotal;
+      const behind = Math.max(0, leaderTotal - p.total);
+      const me = myCode && p.code===myCode ? 'me' : '';
+      const totalPct  = (p.total/maxTecho*100);
+      const remPct    = (maxRemaining/maxTecho*100);
+      const leaderPct = (leaderTotal/maxTecho*100);
+      return `<div class="ceil-row ${me}">
+        <div class="ceil-pos">${i+1}</div>
+        <div class="ceil-main">
+          <div class="ceil-head">
+            <span class="ceil-name">${p.name.split(' ').slice(0,2).join(' ')}${me?' 👈':''}</span>
+            <span class="ceil-state ${alive?'alive':'out'}">${alive?'🟢 VIVO':'🔴 ELIMINADO'}</span>
+            <span class="ceil-meta">${behind>0?`faltan ${behind} p/ líder`:'👑 líder'}</span>
+          </div>
+          <div class="ceil-bar">
+            <div class="ceil-fill" style="width:${totalPct.toFixed(1)}%"></div>
+            <div class="ceil-potential" style="left:${totalPct.toFixed(1)}%;width:${remPct.toFixed(1)}%"></div>
+            <div class="ceil-leader" style="left:${leaderPct.toFixed(1)}%"></div>
+          </div>
+          <div class="ceil-nums"><span>Ahora <b>${p.total}</b></span><span>Techo <b>${techo}</b></span></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = '<div class="loading-msg">Error cargando estadísticas.</div>';
+  }
 }
 
 // ── MODAL PREDICCIONES ──
@@ -1931,6 +2142,7 @@ window.showTab = function(id, el) {
   if (id === 'eliminacion')  renderElimPredictions();
   if (id === 'bracket')      loadElimRounds(renderBracket).then(renderBracket);
   if (id === 'grupos')       syncRealResults().then(renderGroupPredictions);
+  if (id === 'estadisticas') renderEstadisticas();
 };
 
 
