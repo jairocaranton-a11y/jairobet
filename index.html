@@ -977,27 +977,37 @@ function showTab(id,el){
 
 // ── PODIO ──
 // Trono de Hierro (Game of Thrones) en dorado para el 1er lugar
-const THRONE_SVG = `<svg class="throne-svg" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-label="Trono de Hierro">
-  <!-- corona de espadas (alturas irregulares, espada central alta) -->
-  <path d="M8 34 L11 22 L14 34 L17 11 L20 34 L23 5 L26 34 L29 15 L31 2 L33 15 L36 34 L40 5 L43 34 L46 11 L49 34 L52 22 L55 34 Z"/>
-  <!-- espadas saliendo a los lados -->
-  <path d="M9 29 L1 25 L14 33 Z"/>
-  <path d="M55 29 L63 25 L50 33 Z"/>
-  <!-- respaldo -->
-  <rect x="18" y="30" width="28" height="16" rx="1.5"/>
-  <!-- brazos -->
-  <rect x="11" y="33" width="8" height="18" rx="1.5"/>
-  <rect x="45" y="33" width="8" height="18" rx="1.5"/>
-  <!-- puntas de espada en los brazos -->
-  <path d="M11 33 L8 27 L19 33 Z"/>
-  <path d="M53 33 L56 27 L45 33 Z"/>
-  <!-- asiento -->
-  <rect x="15" y="44" width="34" height="7" rx="1"/>
-  <!-- base / escalón -->
-  <rect x="12" y="51" width="40" height="4" rx="1"/>
-  <!-- patas -->
-  <rect x="19" y="50" width="5" height="8" rx="1"/>
-  <rect x="40" y="50" width="5" height="8" rx="1"/>
+const THRONE_SVG = `<svg class="throne-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Trono de Hierro">
+  <g fill="currentColor" stroke="#0A0E1A" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+    <!-- corona de espadas (alturas irregulares, espada central alta) -->
+    <path d="M8 34 L11 22 L14 34 L17 11 L20 34 L23 5 L26 34 L29 15 L31 2 L33 15 L36 34 L40 5 L43 34 L46 11 L49 34 L52 22 L55 34 Z"/>
+    <!-- espadas saliendo a los lados -->
+    <path d="M9 29 L1 25 L14 33 Z"/>
+    <path d="M55 29 L63 25 L50 33 Z"/>
+    <!-- respaldo -->
+    <rect x="18" y="30" width="28" height="16" rx="1.5"/>
+    <!-- brazos -->
+    <rect x="11" y="33" width="8" height="18" rx="1.5"/>
+    <rect x="45" y="33" width="8" height="18" rx="1.5"/>
+    <!-- puntas de espada en los brazos -->
+    <path d="M11 33 L8 27 L19 33 Z"/>
+    <path d="M53 33 L56 27 L45 33 Z"/>
+    <!-- asiento -->
+    <rect x="15" y="44" width="34" height="7" rx="1"/>
+    <!-- base / escalón -->
+    <rect x="12" y="51" width="40" height="4" rx="1"/>
+    <!-- patas -->
+    <rect x="19" y="50" width="5" height="8" rx="1"/>
+    <rect x="40" y="50" width="5" height="8" rx="1"/>
+  </g>
+  <!-- líneas negras que marcan cada espada de la corona -->
+  <g stroke="#0A0E1A" stroke-width="1.1" stroke-linecap="round" fill="none" opacity="0.9">
+    <line x1="17" y1="14" x2="17" y2="30"/>
+    <line x1="23" y1="8"  x2="23" y2="30"/>
+    <line x1="31" y1="6"  x2="31" y2="30"/>
+    <line x1="40" y1="8"  x2="40" y2="30"/>
+    <line x1="46" y1="14" x2="46" y2="30"/>
+  </g>
 </svg>`;
 
 function renderRankingPodium(r){
