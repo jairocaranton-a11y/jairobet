@@ -116,7 +116,7 @@ body{font-family:'Barlow',sans-serif;background:var(--dark);color:var(--text);mi
 .podium-avatar{width:48px;height:48px;border-radius:50%;background:var(--dark4);border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px;animation:podFloat 3s ease-in-out infinite;}
 .podium-slot:nth-child(1) .podium-avatar{border-color:#C0C0C0;animation-delay:.3s;}
 .podium-slot:nth-child(2) .podium-avatar{border-color:var(--gold);animation-delay:0s;}
-.throne-svg{width:30px;height:30px;color:var(--gold);filter:drop-shadow(0 0 3px rgba(242,201,76,0.6));}
+.throne-svg{width:42px;height:42px;color:var(--gold);filter:drop-shadow(0 0 4px rgba(242,201,76,0.7));}
 .podium-slot:nth-child(3) .podium-avatar{border-color:#CD7F32;animation-delay:.6s;}
 @keyframes podFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .podium-pname{font-size:12px;font-weight:700;line-height:1.2;margin-bottom:2px;}
@@ -977,14 +977,27 @@ function showTab(id,el){
 
 // ── PODIO ──
 // Trono de Hierro (Game of Thrones) en dorado para el 1er lugar
-const THRONE_SVG = `<svg class="throne-svg" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-label="Trono">
-  <path d="M14 30 L18 11 L22 30 L26 8 L30 30 L34 6 L38 30 L42 8 L46 30 L50 11 L54 30 Z"/>
-  <rect x="20" y="25" width="24" height="17" rx="2"/>
-  <rect x="13" y="32" width="7" height="15" rx="2"/>
-  <rect x="44" y="32" width="7" height="15" rx="2"/>
-  <rect x="18" y="40" width="28" height="7" rx="1"/>
-  <rect x="20" y="46" width="5" height="10" rx="1"/>
-  <rect x="39" y="46" width="5" height="10" rx="1"/>
+const THRONE_SVG = `<svg class="throne-svg" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-label="Trono de Hierro">
+  <!-- corona de espadas (alturas irregulares, espada central alta) -->
+  <path d="M8 34 L11 22 L14 34 L17 11 L20 34 L23 5 L26 34 L29 15 L31 2 L33 15 L36 34 L40 5 L43 34 L46 11 L49 34 L52 22 L55 34 Z"/>
+  <!-- espadas saliendo a los lados -->
+  <path d="M9 29 L1 25 L14 33 Z"/>
+  <path d="M55 29 L63 25 L50 33 Z"/>
+  <!-- respaldo -->
+  <rect x="18" y="30" width="28" height="16" rx="1.5"/>
+  <!-- brazos -->
+  <rect x="11" y="33" width="8" height="18" rx="1.5"/>
+  <rect x="45" y="33" width="8" height="18" rx="1.5"/>
+  <!-- puntas de espada en los brazos -->
+  <path d="M11 33 L8 27 L19 33 Z"/>
+  <path d="M53 33 L56 27 L45 33 Z"/>
+  <!-- asiento -->
+  <rect x="15" y="44" width="34" height="7" rx="1"/>
+  <!-- base / escalón -->
+  <rect x="12" y="51" width="40" height="4" rx="1"/>
+  <!-- patas -->
+  <rect x="19" y="50" width="5" height="8" rx="1"/>
+  <rect x="40" y="50" width="5" height="8" rx="1"/>
 </svg>`;
 
 function renderRankingPodium(r){
