@@ -1066,6 +1066,13 @@ async function renderRanking(){
     if(!res.ok||!res.ranking||!res.ranking.length){
       list.innerHTML='<div class="loading-msg">📊 El ranking aparecerá cuando haya predicciones guardadas.</div>';return;
     }
+    // 🏆 España campeón: sumar +15 a quienes predijeron España (solo frontend)
+    const CAMPEON = 'España';
+    res.ranking.forEach(p => {
+      if ((p.campeon||0) === 0 && String(p.champion||'').trim() === CAMPEON) {
+        p.campeon = 15; p.total = (p.total||0) + 15;
+      }
+    });
     // Desempate: 1) exactos desc, 2) predicción final (se resuelve en backend)
     const r = res.ranking.slice().sort((a,b)=>{
       if(b.total !== a.total) return b.total - a.total;
